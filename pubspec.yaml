@@ -3,8 +3,8 @@ description: Anchored bubbles with a pointing arrow, spotlight highlighting, and
 version: 0.0.1
 
 environment:
-  sdk: ^3.6.0
-  flutter: ">=3.27.0"
+  sdk: ^3.8.0
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:

@@ -3,8 +3,15 @@ import 'package:pinpoint/pinpoint.dart';
 
 void main() => runApp(const PinpointExampleApp());
 
-class PinpointExampleApp extends StatelessWidget {
+class PinpointExampleApp extends StatefulWidget {
   const PinpointExampleApp({super.key});
+
+  @override
+  State<PinpointExampleApp> createState() => _PinpointExampleAppState();
+}
+
+class _PinpointExampleAppState extends State<PinpointExampleApp> {
+  TextDirection _textDirection = TextDirection.ltr;
 
   @override
   Widget build(BuildContext context) {
@@ -12,118 +19,230 @@ class PinpointExampleApp extends StatelessWidget {
       title: 'Pinpoint',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: const Color(0xFF4A48E0)),
-      home: const BubbleBorderPage(),
+      builder: (context, child) =>
+          Directionality(textDirection: _textDirection, child: child!),
+      home: ExamplePage(
+        rtl: _textDirection == TextDirection.rtl,
+        onRtlChanged: (rtl) => setState(() {
+          _textDirection = rtl ? TextDirection.rtl : TextDirection.ltr;
+        }),
+      ),
     );
   }
 }
 
-class BubbleBorderPage extends StatelessWidget {
-  const BubbleBorderPage({super.key});
+class ExamplePage extends StatefulWidget {
+  const ExamplePage({super.key, required this.rtl, required this.onRtlChanged});
+
+  final bool rtl;
+  final ValueChanged<bool> onRtlChanged;
+
+  @override
+  State<ExamplePage> createState() => _ExamplePageState();
+}
+
+class _ExamplePageState extends State<ExamplePage> {
+  final _cashback = PinpointController(isShowing: true);
+  final _store = PinpointController(isShowing: true);
+  final _playground = PinpointController(isShowing: true);
+
+  PinpointDirection _direction = PinpointDirection.top;
+  PinpointAlignment _alignment = PinpointAlignment.center;
+
+  @override
+  void dispose() {
+    _cashback.dispose();
+    _store.dispose();
+    _playground.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PinpointBubbleBorder')),
+      appBar: AppBar(
+        title: const Text('Pinpoint'),
+        actions: [
+          const Text('RTL'),
+          Switch(value: widget.rtl, onChanged: widget.onRtlChanged),
+        ],
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
         children: [
-          // Like the "Learn Cashback" bubble: arrow near the end.
-          const Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: _Bubble(
-              color: Color(0xFFE0A03C),
-              arrowDirection: AxisDirection.up,
-              arrowOffset: 250,
-              arrow: PinpointArrow(width: 28, height: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.info, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text(
-                    'Learn Cashback On Sahseh',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  SizedBox(width: 12),
-                  Icon(Icons.close, color: Colors.white),
-                ],
+          _CashbackHeader(controller: _cashback),
+          const SizedBox(height: 100),
+          Center(
+            child: Pinpoint(
+              controller: _store,
+              direction: PinpointDirection.top,
+              style: const PinpointStyle(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                arrow: PinpointArrow(width: 24, height: 12),
+                shadows: [BoxShadow(color: Colors.black26, blurRadius: 16)],
               ),
-            ),
-          ),
-          const SizedBox(height: 40),
-          // Like the "Choose Store" bubble: centered arrow pointing down.
-          const Center(
-            child: _Bubble(
-              color: Colors.white,
-              arrowDirection: AxisDirection.down,
-              shadows: [BoxShadow(color: Colors.black26, blurRadius: 12)],
-              child: Text(
+              content: (context, controller) => const Text(
                 'Choose Store',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
+              child: _StoreCard(onTap: _store.toggle),
             ),
           ),
-          const SizedBox(height: 40),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final direction in AxisDirection.values)
-                _Bubble(
-                  color: const Color(0xFF4A48E0),
-                  arrowDirection: direction,
-                  side: const BorderSide(color: Colors.black, width: 2),
-                  child: Text(
-                    direction.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-            ],
+          const SizedBox(height: 48),
+          const Divider(),
+          _Playground(
+            controller: _playground,
+            direction: _direction,
+            alignment: _alignment,
+            onDirection: (d) => setState(() => _direction = d),
+            onAlignment: (a) => setState(() => _alignment = a),
           ),
+          const SizedBox(height: 600),
         ],
       ),
     );
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({
-    required this.color,
-    required this.arrowDirection,
-    required this.child,
-    this.arrow = const PinpointArrow(),
-    this.arrowOffset,
-    this.side = BorderSide.none,
-    this.shadows,
-  });
+/// Like the "Learn Cashback" bubble: below the button, lined up with its
+/// end, with a close button.
+class _CashbackHeader extends StatelessWidget {
+  const _CashbackHeader({required this.controller});
 
-  final Color color;
-  final AxisDirection arrowDirection;
-  final PinpointArrow arrow;
-  final double? arrowOffset;
-  final BorderSide side;
-  final List<BoxShadow>? shadows;
-  final Widget child;
+  final PinpointController controller;
 
   @override
   Widget build(BuildContext context) {
-    // Container adds the border's dimensions to the padding, so the content
-    // stays clear of the arrow.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: ShapeDecoration(
-        color: color,
-        shadows: shadows,
-        shape: PinpointBubbleBorder(
-          arrow: arrow,
-          arrowDirection: arrowDirection,
-          arrowOffset: arrowOffset,
-          side: side,
-          borderRadius: BorderRadius.circular(16),
+      height: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF4A48E0), Color(0xFF3A36C4)],
         ),
       ),
-      child: child,
+      alignment: AlignmentDirectional.topEnd,
+      child: Pinpoint(
+        controller: controller,
+        direction: PinpointDirection.bottom,
+        alignment: PinpointAlignment.end,
+        dismissOnTapOutside: false,
+        style: const PinpointStyle(
+          color: Color(0xFFE0A03C),
+          foregroundColor: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          padding: EdgeInsetsDirectional.fromSTEB(16, 8, 4, 8),
+          arrow: PinpointArrow(width: 24, height: 12),
+        ),
+        content: (context, controller) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.info),
+            const SizedBox(width: 10),
+            const Text(
+              'Learn Cashback On Sahseh',
+              style: TextStyle(fontSize: 16),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              color: Colors.white,
+              onPressed: controller.hide,
+            ),
+          ],
+        ),
+        child: TextButton.icon(
+          onPressed: controller.toggle,
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
+          icon: const Icon(Icons.help_outline),
+          label: const Text(
+            'Learn About Cashback',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoreCard extends StatelessWidget {
+  const _StoreCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: const SizedBox(
+          width: 240,
+          height: 120,
+          child: Center(
+            child: ListTile(
+              leading: Icon(Icons.storefront, size: 40),
+              title: Text('Amazon'),
+              subtitle: Text('Up to 9% cashback'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Playground extends StatelessWidget {
+  const _Playground({
+    required this.controller,
+    required this.direction,
+    required this.alignment,
+    required this.onDirection,
+    required this.onAlignment,
+  });
+
+  final PinpointController controller;
+  final PinpointDirection direction;
+  final PinpointAlignment alignment;
+  final ValueChanged<PinpointDirection> onDirection;
+  final ValueChanged<PinpointAlignment> onAlignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          SegmentedButton<PinpointDirection>(
+            segments: [
+              for (final d in PinpointDirection.values)
+                ButtonSegment(value: d, label: Text(d.name)),
+            ],
+            selected: {direction},
+            onSelectionChanged: (s) => onDirection(s.single),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<PinpointAlignment>(
+            segments: [
+              for (final a in PinpointAlignment.values)
+                ButtonSegment(value: a, label: Text(a.name)),
+            ],
+            selected: {alignment},
+            onSelectionChanged: (s) => onAlignment(s.single),
+          ),
+          const SizedBox(height: 100),
+          Pinpoint(
+            controller: controller,
+            direction: direction,
+            alignment: alignment,
+            dismissOnTapOutside: false,
+            content: (context, controller) =>
+                Text('${direction.name} / ${alignment.name}'),
+            child: FilledButton(
+              onPressed: controller.toggle,
+              child: const Text('Target'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

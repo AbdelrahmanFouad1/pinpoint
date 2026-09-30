@@ -112,8 +112,11 @@ class PinpointBubbleBorder extends OutlinedBorder {
   ) {
     return PinpointBubbleBorder(
       side: BorderSide.lerp(a.side, b.side, t),
-      borderRadius:
-          BorderRadiusGeometry.lerp(a.borderRadius, b.borderRadius, t)!,
+      borderRadius: BorderRadiusGeometry.lerp(
+        a.borderRadius,
+        b.borderRadius,
+        t,
+      )!,
       arrow: PinpointArrow.lerp(a.arrow, b.arrow, t),
       arrowDirection: b.arrowDirection,
       arrowOffset: lerpDouble(a.arrowOffset, b.arrowOffset, t),
@@ -160,8 +163,9 @@ class PinpointBubbleBorder extends OutlinedBorder {
     // of the edge between [min] and [max].
     double center(double origin, double min, double max) {
       if (min > max) return (min + max) / 2;
-      final wanted =
-          arrowOffset == null ? (min + max) / 2 : origin + arrowOffset!;
+      final wanted = arrowOffset == null
+          ? (min + max) / 2
+          : origin + arrowOffset!;
       return wanted.clamp(min, max);
     }
 
@@ -237,6 +241,7 @@ class PinpointBubbleBorder extends OutlinedBorder {
       Object.hash(side, borderRadius, arrow, arrowDirection, arrowOffset);
 
   @override
-  String toString() => 'PinpointBubbleBorder($side, $borderRadius, $arrow, '
+  String toString() =>
+      'PinpointBubbleBorder($side, $borderRadius, $arrow, '
       'arrowDirection: $arrowDirection, arrowOffset: $arrowOffset)';
 }

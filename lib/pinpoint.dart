@@ -4,3 +4,8 @@ library;
 
 export 'src/arrow.dart';
 export 'src/bubble_border.dart';
+export 'src/controller.dart';
+export 'src/direction.dart';
+export 'src/geometry.dart';
+export 'src/pinpoint.dart';
+export 'src/style.dart';

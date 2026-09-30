@@ -8,8 +8,8 @@ class PinpointArrow {
   /// Creates an arrow with the given [width] (its base) and [height]
   /// (from base to tip).
   const PinpointArrow({this.width = 20, this.height = 10})
-      : assert(width >= 0),
-        assert(height >= 0);
+    : assert(width >= 0),
+      assert(height >= 0);
 
   /// An arrow with zero size, for bubbles that should not point.
   static const PinpointArrow none = PinpointArrow(width: 0, height: 0);

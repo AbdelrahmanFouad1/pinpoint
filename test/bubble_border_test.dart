@@ -10,24 +10,31 @@ void main() {
     AxisDirection direction, {
     double? offset,
     BorderRadiusGeometry radius = const BorderRadius.all(Radius.circular(12)),
-  }) =>
-      PinpointBubbleBorder(
-        arrow: arrow,
-        arrowDirection: direction,
-        arrowOffset: offset,
-        borderRadius: radius,
-      );
+  }) => PinpointBubbleBorder(
+    arrow: arrow,
+    arrowDirection: direction,
+    arrowOffset: offset,
+    borderRadius: radius,
+  );
 
   group('dimensions', () {
     test('reserves the arrow height on the arrow edge only', () {
-      expect(border(AxisDirection.down).dimensions,
-          const EdgeInsets.only(bottom: 10));
       expect(
-          border(AxisDirection.up).dimensions, const EdgeInsets.only(top: 10));
-      expect(border(AxisDirection.left).dimensions,
-          const EdgeInsets.only(left: 10));
-      expect(border(AxisDirection.right).dimensions,
-          const EdgeInsets.only(right: 10));
+        border(AxisDirection.down).dimensions,
+        const EdgeInsets.only(bottom: 10),
+      );
+      expect(
+        border(AxisDirection.up).dimensions,
+        const EdgeInsets.only(top: 10),
+      );
+      expect(
+        border(AxisDirection.left).dimensions,
+        const EdgeInsets.only(left: 10),
+      );
+      expect(
+        border(AxisDirection.right).dimensions,
+        const EdgeInsets.only(right: 10),
+      );
     });
 
     test('includes the stroke inset', () {
@@ -67,8 +74,10 @@ void main() {
 
     test('arrowOffset is relative to the rect origin', () {
       final shifted = rect.shift(const Offset(50, 30));
-      final path =
-          border(AxisDirection.down, offset: 150).getOuterPath(shifted);
+      final path = border(
+        AxisDirection.down,
+        offset: 150,
+      ).getOuterPath(shifted);
       expect(path.contains(const Offset(200, 128)), isTrue);
     });
 
@@ -110,12 +119,13 @@ void main() {
   test('scale, copyWith and equality', () {
     final b = border(AxisDirection.down, offset: 40);
     expect(
-        b.scale(2),
-        border(AxisDirection.down,
-                offset: 80, radius: const BorderRadius.all(Radius.circular(24)))
-            .copyWith(
-          arrow: const PinpointArrow(width: 40, height: 20),
-        ));
+      b.scale(2),
+      border(
+        AxisDirection.down,
+        offset: 80,
+        radius: const BorderRadius.all(Radius.circular(24)),
+      ).copyWith(arrow: const PinpointArrow(width: 40, height: 20)),
+    );
     expect(b.copyWith(), b);
     expect(b.copyWith(arrowDirection: AxisDirection.up), isNot(b));
   });
@@ -127,8 +137,9 @@ void main() {
     expect(mid.arrowOffset, 50);
   });
 
-  testWidgets('renders inside a ShapeDecoration with padding for the arrow',
-      (tester) async {
+  testWidgets('renders inside a ShapeDecoration with padding for the arrow', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,

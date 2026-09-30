@@ -1,0 +1,101 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
+
+import 'arrow.dart';
+
+/// The look of a [Pinpoint] bubble.
+///
+/// Every field is optional; unset fields fall back to defaults derived from
+/// the ambient [Theme].
+@immutable
+class PinpointStyle {
+  /// Creates a bubble style.
+  const PinpointStyle({
+    this.color,
+    this.foregroundColor,
+    this.borderRadius,
+    this.padding,
+    this.side,
+    this.shadows,
+    this.arrow,
+  });
+
+  /// The bubble's fill color. Defaults to the theme's inverse surface color.
+  final Color? color;
+
+  /// The default color for text and icons inside the bubble. Defaults to a
+  /// color that contrasts with [color].
+  final Color? foregroundColor;
+
+  /// The radii of the bubble's corners. Defaults to 12.
+  final BorderRadiusGeometry? borderRadius;
+
+  /// The space between the bubble's edge and its content.
+  final EdgeInsetsGeometry? padding;
+
+  /// The bubble's outline. Defaults to none.
+  final BorderSide? side;
+
+  /// The bubble's shadows, which follow its shape, arrow included.
+  final List<BoxShadow>? shadows;
+
+  /// The size of the arrow.
+  final PinpointArrow? arrow;
+
+  /// Returns a copy of this style with the given fields replaced.
+  PinpointStyle copyWith({
+    Color? color,
+    Color? foregroundColor,
+    BorderRadiusGeometry? borderRadius,
+    EdgeInsetsGeometry? padding,
+    BorderSide? side,
+    List<BoxShadow>? shadows,
+    PinpointArrow? arrow,
+  }) {
+    return PinpointStyle(
+      color: color ?? this.color,
+      foregroundColor: foregroundColor ?? this.foregroundColor,
+      borderRadius: borderRadius ?? this.borderRadius,
+      padding: padding ?? this.padding,
+      side: side ?? this.side,
+      shadows: shadows ?? this.shadows,
+      arrow: arrow ?? this.arrow,
+    );
+  }
+
+  /// Returns a style where fields unset in this one are taken from [other].
+  PinpointStyle merge(PinpointStyle? other) {
+    if (other == null) return this;
+    return PinpointStyle(
+      color: color ?? other.color,
+      foregroundColor: foregroundColor ?? other.foregroundColor,
+      borderRadius: borderRadius ?? other.borderRadius,
+      padding: padding ?? other.padding,
+      side: side ?? other.side,
+      shadows: shadows ?? other.shadows,
+      arrow: arrow ?? other.arrow,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is PinpointStyle &&
+      other.color == color &&
+      other.foregroundColor == foregroundColor &&
+      other.borderRadius == borderRadius &&
+      other.padding == padding &&
+      other.side == side &&
+      listEquals(other.shadows, shadows) &&
+      other.arrow == arrow;
+
+  @override
+  int get hashCode => Object.hash(
+    color,
+    foregroundColor,
+    borderRadius,
+    padding,
+    side,
+    shadows == null ? null : Object.hashAll(shadows!),
+    arrow,
+  );
+}
