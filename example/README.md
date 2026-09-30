@@ -1,17 +1,13 @@
-# pinpoint_example
+# pinpoint example
 
-A new Flutter project.
+A tour of the `pinpoint` package:
 
-## Getting Started
+- A bubble anchored under a button, lined up with its end, with a close
+  button.
+- A spotlight on a card.
+- A playground to try every direction, alignment and highlight, in
+  left-to-right and right-to-left.
+- A guided tour across the app bar, the header, a card and a button.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Run it with `flutter run`. `lib/screenshots.dart` renders the scenes used
+for the package screenshots.
