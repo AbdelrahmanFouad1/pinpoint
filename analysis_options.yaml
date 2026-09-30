@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    - public_member_api_docs
+    - prefer_const_constructors
+    - prefer_final_locals
+    - sort_constructors_first
