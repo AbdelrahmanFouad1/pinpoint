@@ -105,14 +105,15 @@ class Pinpoint extends StatefulWidget {
 class _PinpointState extends State<Pinpoint>
     with SingleTickerProviderStateMixin {
   final _overlay = OverlayPortalController();
-  late final _animation = AnimationController(
-    vsync: this,
-    duration: widget.animationDuration,
-  );
+  late final AnimationController _animation;
 
   @override
   void initState() {
     super.initState();
+    _animation = AnimationController(
+      vsync: this,
+      duration: widget.animationDuration,
+    );
     widget.controller.addListener(_sync);
     if (widget.controller.isShowing) {
       _overlay.show();

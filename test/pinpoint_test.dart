@@ -224,4 +224,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Bubble').hitTestable(), findsOneWidget);
   });
+
+  testWidgets('can be removed without ever being shown', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
+  });
 }

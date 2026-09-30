@@ -46,12 +46,57 @@ class _ExamplePageState extends State<ExamplePage> {
   final _store = PinpointController();
   final _playground = PinpointController(isShowing: true);
 
+  late final _tour = PinpointTour(
+    steps: [
+      PinpointStep(
+        targetId: 'rtl',
+        direction: PinpointDirection.bottom,
+        alignment: PinpointAlignment.end,
+        content: (context, tour) =>
+            TourCard(tour: tour, text: 'Flip the whole app to right-to-left.'),
+      ),
+      PinpointStep(
+        targetId: 'cashback',
+        direction: PinpointDirection.bottom,
+        alignment: PinpointAlignment.end,
+        content: (context, tour) =>
+            TourCard(tour: tour, text: 'Learn how cashback works.'),
+      ),
+      PinpointStep(
+        targetId: 'store',
+        highlight: const PinpointHighlight.spotlight(
+          padding: EdgeInsets.all(12),
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+        ),
+        content: (context, tour) =>
+            TourCard(tour: tour, text: 'Choose a store to shop from.'),
+      ),
+      PinpointStep(
+        targetId: 'playground',
+        content: (context, tour) =>
+            TourCard(tour: tour, text: 'Play with every option here.'),
+      ),
+    ],
+    style: const PinpointStyle(
+      color: Colors.white,
+      foregroundColor: Colors.black87,
+      padding: EdgeInsets.fromLTRB(16, 12, 8, 4),
+      shadows: [BoxShadow(color: Colors.black26, blurRadius: 16)],
+    ),
+    onFinish: () => _snack('Tour finished'),
+    onSkip: () => _snack('Tour skipped'),
+  );
+
+  void _snack(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
   PinpointDirection _direction = PinpointDirection.top;
   PinpointAlignment _alignment = PinpointAlignment.center;
   String _highlight = 'none';
 
   @override
   void dispose() {
+    _tour.dispose();
     _cashback.dispose();
     _store.dispose();
     _playground.dispose();
@@ -64,8 +109,21 @@ class _ExamplePageState extends State<ExamplePage> {
       appBar: AppBar(
         title: const Text('Pinpoint'),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              // Keep the demo bubbles out of the way during the tour.
+              _cashback.hide();
+              _playground.hide();
+              _tour.start();
+            },
+            icon: const Icon(Icons.tour),
+            label: const Text('Tour'),
+          ),
           const Text('RTL'),
-          Switch(value: widget.rtl, onChanged: widget.onRtlChanged),
+          PinpointTarget(
+            id: 'rtl',
+            child: Switch(value: widget.rtl, onChanged: widget.onRtlChanged),
+          ),
         ],
       ),
       body: ListView(
@@ -97,7 +155,10 @@ class _ExamplePageState extends State<ExamplePage> {
                 'Choose Store',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
-              child: _StoreCard(onTap: _store.toggle),
+              child: PinpointTarget(
+                id: 'store',
+                child: _StoreCard(onTap: _store.toggle),
+              ),
             ),
           ),
           const SizedBox(height: 48),
@@ -164,13 +225,16 @@ class _CashbackHeader extends StatelessWidget {
             ),
           ],
         ),
-        child: TextButton.icon(
-          onPressed: controller.toggle,
-          style: TextButton.styleFrom(foregroundColor: Colors.white),
-          icon: const Icon(Icons.help_outline),
-          label: const Text(
-            'Learn About Cashback',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        child: PinpointTarget(
+          id: 'cashback',
+          child: TextButton.icon(
+            onPressed: controller.toggle,
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            icon: const Icon(Icons.help_outline),
+            label: const Text(
+              'Learn About Cashback',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
       ),
@@ -271,10 +335,63 @@ class _Playground extends StatelessWidget {
             dismissOnTapOutside: highlight != 'none',
             content: (context, controller) =>
                 Text('${direction.name} / ${alignment.name}'),
-            child: FilledButton(
-              onPressed: controller.toggle,
-              child: const Text('Target'),
+            child: PinpointTarget(
+              id: 'playground',
+              child: FilledButton(
+                onPressed: controller.toggle,
+                child: const Text('Target'),
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The content of each tour step: a message, a step counter, and buttons.
+class TourCard extends StatelessWidget {
+  const TourCard({super.key, required this.tour, required this.text});
+
+  final PinpointTour tour;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = TextButton.styleFrom(
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minimumSize: Size.zero,
+    );
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 300),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(text, style: const TextStyle(fontSize: 16)),
+          Row(
+            children: [
+              Text('${tour.currentIndex! + 1} / ${tour.length}'),
+              const Spacer(),
+              if (!tour.isLast)
+                TextButton(
+                  style: compact,
+                  onPressed: tour.skip,
+                  child: const Text('Skip'),
+                ),
+              if (!tour.isFirst)
+                TextButton(
+                  style: compact,
+                  onPressed: tour.previous,
+                  child: const Text('Back'),
+                ),
+              TextButton(
+                style: compact,
+                onPressed: tour.next,
+                child: Text(tour.isLast ? 'Done' : 'Next'),
+              ),
+            ],
           ),
         ],
       ),
