@@ -43,11 +43,12 @@ class ExamplePage extends StatefulWidget {
 
 class _ExamplePageState extends State<ExamplePage> {
   final _cashback = PinpointController(isShowing: true);
-  final _store = PinpointController(isShowing: true);
+  final _store = PinpointController();
   final _playground = PinpointController(isShowing: true);
 
   PinpointDirection _direction = PinpointDirection.top;
   PinpointAlignment _alignment = PinpointAlignment.center;
+  String _highlight = 'none';
 
   @override
   void dispose() {
@@ -70,11 +71,22 @@ class _ExamplePageState extends State<ExamplePage> {
       body: ListView(
         children: [
           _CashbackHeader(controller: _cashback),
+          const SizedBox(height: 24),
+          Center(
+            child: OutlinedButton(
+              onPressed: _store.show,
+              child: const Text('Spotlight the store'),
+            ),
+          ),
           const SizedBox(height: 100),
           Center(
             child: Pinpoint(
               controller: _store,
               direction: PinpointDirection.top,
+              highlight: const PinpointHighlight.spotlight(
+                padding: EdgeInsets.all(12),
+                borderRadius: BorderRadius.all(Radius.circular(24)),
+              ),
               style: const PinpointStyle(
                 color: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -96,6 +108,8 @@ class _ExamplePageState extends State<ExamplePage> {
             alignment: _alignment,
             onDirection: (d) => setState(() => _direction = d),
             onAlignment: (a) => setState(() => _alignment = a),
+            highlight: _highlight,
+            onHighlight: (h) => setState(() => _highlight = h),
           ),
           const SizedBox(height: 600),
         ],
@@ -197,7 +211,12 @@ class _Playground extends StatelessWidget {
     required this.alignment,
     required this.onDirection,
     required this.onAlignment,
+    required this.highlight,
+    required this.onHighlight,
   });
+
+  final String highlight;
+  final ValueChanged<String> onHighlight;
 
   final PinpointController controller;
   final PinpointDirection direction;
@@ -228,12 +247,28 @@ class _Playground extends StatelessWidget {
             selected: {alignment},
             onSelectionChanged: (s) => onAlignment(s.single),
           ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'none', label: Text('none')),
+              ButtonSegment(value: 'dim', label: Text('dim')),
+              ButtonSegment(value: 'spotlight', label: Text('spotlight')),
+            ],
+            selected: {highlight},
+            onSelectionChanged: (s) => onHighlight(s.single),
+          ),
           const SizedBox(height: 100),
           Pinpoint(
             controller: controller,
             direction: direction,
             alignment: alignment,
-            dismissOnTapOutside: false,
+            highlight: switch (highlight) {
+              'dim' => const PinpointHighlight.dim(),
+              'spotlight' => const PinpointHighlight.spotlight(),
+              _ => const PinpointHighlight.none(),
+            },
+            // With a barrier, tapping it is the way out.
+            dismissOnTapOutside: highlight != 'none',
             content: (context, controller) =>
                 Text('${direction.name} / ${alignment.name}'),
             child: FilledButton(

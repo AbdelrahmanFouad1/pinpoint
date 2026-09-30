@@ -2,9 +2,11 @@ import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 
 import 'arrow.dart';
+import 'barrier.dart';
 import 'bubble_layout.dart';
 import 'controller.dart';
 import 'direction.dart';
+import 'highlight.dart';
 import 'style.dart';
 
 /// Builds the content of a [Pinpoint] bubble. The [controller] can be used
@@ -26,6 +28,18 @@ typedef PinpointContentBuilder =
 ///
 /// The bubble follows [child] as it moves, for example while scrolling, and
 /// flips to the opposite side when there's no room on the preferred one.
+///
+/// To draw attention to [child], dim the rest of the screen with
+/// [highlight]:
+///
+/// ```dart
+/// Pinpoint(
+///   controller: controller,
+///   highlight: const PinpointHighlight.spotlight(),
+///   content: (context, controller) => const Text('Choose a store'),
+///   child: const StoreCard(),
+/// )
+/// ```
 class Pinpoint extends StatefulWidget {
   /// Creates a bubble anchored to [child].
   const Pinpoint({
@@ -36,6 +50,7 @@ class Pinpoint extends StatefulWidget {
     this.direction = PinpointDirection.top,
     this.alignment = PinpointAlignment.center,
     this.style,
+    this.highlight = const PinpointHighlight.none(),
     this.gap = 4,
     this.screenMargin = const EdgeInsets.all(12),
     this.autoFlip = true,
@@ -61,7 +76,11 @@ class Pinpoint extends StatefulWidget {
   /// The look of the bubble.
   final PinpointStyle? style;
 
-  /// The distance between the arrow's tip and [child].
+  /// How the rest of the screen is treated while the bubble shows.
+  final PinpointHighlight highlight;
+
+  /// The distance between the arrow's tip and [child], or the spotlight
+  /// hole around it.
   final double gap;
 
   /// The minimum distance between the bubble and the screen's edges.
@@ -71,8 +90,9 @@ class Pinpoint extends StatefulWidget {
   /// doesn't fit on the [direction] side.
   final bool autoFlip;
 
-  /// Whether tapping anywhere outside the bubble and [child] hides it.
-  /// Dragging, for example to scroll the page, does not.
+  /// Whether tapping anywhere outside the bubble and [child] hides it,
+  /// including on the [highlight] barrier. Dragging, for example to scroll
+  /// the page, does not.
   final bool dismissOnTapOutside;
 
   /// How long the bubble takes to appear and disappear.
@@ -186,16 +206,24 @@ class _PinpointState extends State<Pinpoint>
       Offset.zero & info.childSize,
     );
     final area = _scrollableArea();
+    final visible = area == null || area.overlaps(target);
 
-    return TapRegion(
+    final highlight = widget.highlight;
+    final textDirection = Directionality.of(context);
+    // With a spotlight, the bubble points at the hole, not the bare target.
+    final anchor = highlight.spotlight
+        ? highlight.padding.resolve(textDirection).inflateRect(target)
+        : target;
+
+    final bubble = TapRegion(
       groupId: this,
       onTapOutside: widget.dismissOnTapOutside
           ? (event) => _outsideDown = event.position
           : null,
       onTapUpOutside: widget.dismissOnTapOutside ? _handleUpOutside : null,
       child: PinpointBubbleLayout(
-        target: target,
-        visible: area == null || area.overlaps(target),
+        target: anchor,
+        visible: visible,
         direction: widget.direction,
         alignment: widget.alignment,
         gap: widget.gap,
@@ -224,6 +252,21 @@ class _PinpointState extends State<Pinpoint>
           ),
         ),
       ),
+    );
+
+    if (!highlight.hasBarrier || !visible) return bubble;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PinpointBarrier(
+          color: highlight.color,
+          hole: highlight.spotlight
+              ? highlight.borderRadius.resolve(textDirection).toRRect(anchor)
+              : null,
+          animation: _animation,
+        ),
+        bubble,
+      ],
     );
   }
 }
