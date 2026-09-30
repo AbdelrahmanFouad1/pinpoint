@@ -182,7 +182,13 @@ class RenderPinpointBubbleLayout extends RenderBox
 
   // Paint-only inputs.
   bool _visible;
-  set visible(bool value) => _setPaint(_visible, value, (v) => _visible = v);
+  set visible(bool value) {
+    if (_visible == value) return;
+    _visible = value;
+    markNeedsPaint();
+    _updateSemanticsVisibility();
+  }
+
   Color _color;
   set color(Color value) => _setPaint(_color, value, (v) => _color = v);
   BorderRadiusGeometry _borderRadius;
@@ -195,9 +201,9 @@ class RenderPinpointBubbleLayout extends RenderBox
   Animation<double> _animation;
   set animation(Animation<double> value) {
     if (identical(_animation, value)) return;
-    if (attached) _animation.removeListener(markNeedsPaint);
+    if (attached) _animation.removeListener(_handleAnimation);
     _animation = value;
-    if (attached) _animation.addListener(markNeedsPaint);
+    if (attached) _animation.addListener(_handleAnimation);
     markNeedsPaint();
   }
 
@@ -226,12 +232,12 @@ class RenderPinpointBubbleLayout extends RenderBox
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
-    _animation.addListener(markNeedsPaint);
+    _animation.addListener(_handleAnimation);
   }
 
   @override
   void detach() {
-    _animation.removeListener(markNeedsPaint);
+    _animation.removeListener(_handleAnimation);
     super.detach();
   }
 
@@ -246,6 +252,7 @@ class RenderPinpointBubbleLayout extends RenderBox
     final child = this.child;
     if (child == null) {
       _geometry = null;
+      _updateSemanticsVisibility();
       return;
     }
 
@@ -277,6 +284,7 @@ class RenderPinpointBubbleLayout extends RenderBox
       autoFlip: _autoFlip,
     );
     _geometry = geometry;
+    _updateSemanticsVisibility();
 
     final insets = _border(
       geometry.arrowDirection,
@@ -355,6 +363,25 @@ class RenderPinpointBubbleLayout extends RenderBox
         (context, _) => paintBubble(context, offset),
       ),
     );
+  }
+
+  void _handleAnimation() {
+    markNeedsPaint();
+    _updateSemanticsVisibility();
+  }
+
+  // A bubble that isn't painted shouldn't be read by screen readers either.
+  bool _semanticsVisible = false;
+
+  void _updateSemanticsVisibility() {
+    if (_semanticsVisible == _hittable) return;
+    _semanticsVisible = _hittable;
+    markNeedsSemanticsUpdate();
+  }
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    if (_semanticsVisible) super.visitChildrenForSemantics(visitor);
   }
 
   bool get _hittable => _geometry != null && _visible && _animation.value > 0;

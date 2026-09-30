@@ -11,4 +11,5 @@ export 'src/geometry.dart';
 export 'src/pinpoint.dart';
 export 'src/style.dart';
 export 'src/target.dart' show PinpointTarget;
+export 'src/theme.dart';
 export 'src/tour.dart';

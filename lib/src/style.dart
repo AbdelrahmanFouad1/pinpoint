@@ -77,6 +77,31 @@ class PinpointStyle {
     );
   }
 
+  /// Linearly interpolates between two styles, for theme animations.
+  static PinpointStyle? lerp(PinpointStyle? a, PinpointStyle? b, double t) {
+    if (identical(a, b)) return a;
+    T? pick<T>(T? a, T? b) => t < 0.5 ? a : b;
+    final arrowA = a?.arrow, arrowB = b?.arrow;
+    final sideA = a?.side, sideB = b?.side;
+    return PinpointStyle(
+      color: Color.lerp(a?.color, b?.color, t),
+      foregroundColor: Color.lerp(a?.foregroundColor, b?.foregroundColor, t),
+      borderRadius: BorderRadiusGeometry.lerp(
+        a?.borderRadius,
+        b?.borderRadius,
+        t,
+      ),
+      padding: EdgeInsetsGeometry.lerp(a?.padding, b?.padding, t),
+      side: sideA != null && sideB != null
+          ? BorderSide.lerp(sideA, sideB, t)
+          : pick(sideA, sideB),
+      shadows: BoxShadow.lerpList(a?.shadows, b?.shadows, t),
+      arrow: arrowA != null && arrowB != null
+          ? PinpointArrow.lerp(arrowA, arrowB, t)
+          : pick(arrowA, arrowB),
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       other is PinpointStyle &&

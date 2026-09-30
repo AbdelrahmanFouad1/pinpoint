@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'arrow.dart';
 import 'barrier.dart';
@@ -8,6 +9,7 @@ import 'controller.dart';
 import 'direction.dart';
 import 'highlight.dart';
 import 'style.dart';
+import 'theme.dart';
 
 /// Builds the content of a [Pinpoint] bubble. The [controller] can be used
 /// to close the bubble from inside it, for example from a close button.
@@ -93,9 +95,13 @@ class Pinpoint extends StatefulWidget {
   /// Whether tapping anywhere outside the bubble and [child] hides it,
   /// including on the [highlight] barrier. Dragging, for example to scroll
   /// the page, does not.
+  ///
+  /// When true, the Escape key and the screen reader's dismiss action on
+  /// the barrier hide the bubble too.
   final bool dismissOnTapOutside;
 
-  /// How long the bubble takes to appear and disappear.
+  /// How long the bubble takes to appear and disappear. Ignored when the
+  /// platform asks for reduced motion, see [MediaQueryData.disableAnimations].
   final Duration animationDuration;
 
   @override
@@ -118,13 +124,27 @@ class _PinpointState extends State<Pinpoint>
     if (widget.controller.isShowing) {
       _overlay.show();
       _animation.value = 1;
+      HardwareKeyboard.instance.addHandler(_handleKey);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateDuration();
+  }
+
+  void _updateDuration() {
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _animation.duration = reduceMotion
+        ? Duration.zero
+        : widget.animationDuration;
   }
 
   @override
   void didUpdateWidget(Pinpoint oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _animation.duration = widget.animationDuration;
+    _updateDuration();
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_sync);
       widget.controller.addListener(_sync);
@@ -135,6 +155,7 @@ class _PinpointState extends State<Pinpoint>
   @override
   void dispose() {
     widget.controller.removeListener(_sync);
+    HardwareKeyboard.instance.removeHandler(_handleKey);
     _animation.dispose();
     super.dispose();
   }
@@ -143,11 +164,23 @@ class _PinpointState extends State<Pinpoint>
     if (widget.controller.isShowing) {
       _overlay.show();
       _animation.forward();
+      HardwareKeyboard.instance.addHandler(_handleKey);
     } else {
+      HardwareKeyboard.instance.removeHandler(_handleKey);
       _animation.reverse().whenCompleteOrCancel(() {
         if (mounted && !widget.controller.isShowing) _overlay.hide();
       });
     }
+  }
+
+  bool _handleKey(KeyEvent event) {
+    if (!widget.dismissOnTapOutside ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape) {
+      return false;
+    }
+    widget.controller.hide();
+    return true;
   }
 
   // Where the pointer went down outside, to tell taps apart from drags:
@@ -192,7 +225,9 @@ class _PinpointState extends State<Pinpoint>
 
   Widget _buildBubble(BuildContext context, OverlayChildLayoutInfo info) {
     final theme = Theme.of(context);
-    final style = widget.style ?? const PinpointStyle();
+    final style = (widget.style ?? const PinpointStyle()).merge(
+      PinpointTheme.of(context).style,
+    );
     final color = style.color ?? theme.colorScheme.inverseSurface;
     final foreground =
         style.foregroundColor ??
@@ -237,17 +272,23 @@ class _PinpointState extends State<Pinpoint>
         shadows: style.shadows ?? const [],
         arrow: style.arrow ?? const PinpointArrow(),
         animation: _animation,
-        child: Padding(
-          padding:
-              style.padding ??
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: IconTheme.merge(
-            data: IconThemeData(color: foreground),
-            child: DefaultTextStyle.merge(
-              style: TextStyle(color: foreground),
-              child: Builder(
-                builder: (context) =>
-                    widget.content(context, widget.controller),
+        // Read as one unit, and announced when it appears.
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          explicitChildNodes: true,
+          child: Padding(
+            padding:
+                style.padding ??
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: IconTheme.merge(
+              data: IconThemeData(color: foreground),
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: foreground),
+                child: Builder(
+                  builder: (context) =>
+                      widget.content(context, widget.controller),
+                ),
               ),
             ),
           ),
@@ -259,12 +300,20 @@ class _PinpointState extends State<Pinpoint>
     return Stack(
       fit: StackFit.expand,
       children: [
-        PinpointBarrier(
-          color: highlight.color,
-          hole: highlight.spotlight
-              ? highlight.borderRadius.resolve(textDirection).toRRect(anchor)
+        Semantics(
+          // Like ModalBarrier: lets screen reader users dismiss it.
+          label: widget.dismissOnTapOutside
+              ? MaterialLocalizations.of(context).modalBarrierDismissLabel
               : null,
-          animation: _animation,
+          onTap: widget.dismissOnTapOutside ? widget.controller.hide : null,
+          onDismiss: widget.dismissOnTapOutside ? widget.controller.hide : null,
+          child: PinpointBarrier(
+            color: highlight.color,
+            hole: highlight.spotlight
+                ? highlight.borderRadius.resolve(textDirection).toRRect(anchor)
+                : null,
+            animation: _animation,
+          ),
         ),
         bubble,
       ],
