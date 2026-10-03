@@ -172,3 +172,36 @@ Offset placePinpointCompanion({
   final maxX = overlay.width - margin.right - size.width;
   return Offset(math.max(minX, math.min(x, maxX)), y);
 }
+
+/// Places a widget of size [size] in a corner of the overlay, inset by
+/// [insets], without covering any of the [avoid] rects.
+///
+/// It tries the top corner at the end of the reading direction first, then
+/// the bottom end, top start and bottom start corners. If every corner
+/// covers something, it stays in the first.
+Offset placePinpointCorner({
+  required Size size,
+  required Size overlay,
+  required TextDirection textDirection,
+  EdgeInsets insets = EdgeInsets.zero,
+  List<Rect> avoid = const [],
+}) {
+  final left = insets.left;
+  final right = overlay.width - insets.right - size.width;
+  final top = insets.top;
+  final bottom = overlay.height - insets.bottom - size.height;
+  final (start, end) = textDirection == TextDirection.rtl
+      ? (right, left)
+      : (left, right);
+
+  final corners = [
+    Offset(end, top),
+    Offset(end, bottom),
+    Offset(start, top),
+    Offset(start, bottom),
+  ];
+  return corners.firstWhere(
+    (corner) => !avoid.any((rect) => rect.overlaps(corner & size)),
+    orElse: () => corners.first,
+  );
+}

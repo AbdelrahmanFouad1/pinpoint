@@ -238,7 +238,9 @@ class _PinpointTargetState extends State<PinpointTarget>
             children: [body, const SizedBox(height: 8), buttons(context)],
           );
         }
-        if (controls != null && controls.showClose) {
+        if (controls != null &&
+            controls.showClose &&
+            controls.closePlacement == PinpointClosePlacement.bubble) {
           body = Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,6 +258,13 @@ class _PinpointTargetState extends State<PinpointTarget>
         }
         return body;
       },
+      cornerContent:
+          controls != null &&
+              controls.showClose &&
+              controls.closePlacement == PinpointClosePlacement.screen
+          ? (context, _) =>
+                PinpointTourCloseButton(tour: tour, controls: controls)
+          : null,
       outsideContent: controls != null && !inside
           ? (context, _) => buttons(context)
           : null,

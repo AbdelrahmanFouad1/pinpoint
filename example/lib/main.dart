@@ -382,6 +382,8 @@ class _SpotlightDemoState extends State<SpotlightDemo> {
 // Tour
 // ---------------------------------------------------------------------------
 
+enum _Close { off, bubble, screen }
+
 class TourDemo extends StatefulWidget {
   const TourDemo({super.key});
 
@@ -391,7 +393,7 @@ class TourDemo extends StatefulWidget {
 
 class _TourDemoState extends State<TourDemo> {
   PinpointControlsPlacement _placement = PinpointControlsPlacement.outside;
-  bool _close = true;
+  _Close _close = _Close.screen;
   bool _tapTarget = false;
   PinpointTour? _tour;
 
@@ -405,7 +407,13 @@ class _TourDemoState extends State<TourDemo> {
     _tour?.dispose();
     final tour = PinpointTour(
       advanceOnTargetTap: _tapTarget,
-      controls: PinpointTourControls(placement: _placement, showClose: _close),
+      controls: PinpointTourControls(
+        placement: _placement,
+        showClose: _close != _Close.off,
+        closePlacement: _close == _Close.screen
+            ? PinpointClosePlacement.screen
+            : PinpointClosePlacement.bubble,
+      ),
       style: const PinpointStyle(
         color: Colors.white,
         foregroundColor: Colors.black87,
@@ -549,10 +557,10 @@ class _TourSettings extends StatelessWidget {
   });
 
   final PinpointControlsPlacement placement;
-  final bool close;
+  final _Close close;
   final bool tapTarget;
   final ValueChanged<PinpointControlsPlacement> onPlacement;
-  final ValueChanged<bool> onClose;
+  final ValueChanged<_Close> onClose;
   final ValueChanged<bool> onTapTarget;
   final VoidCallback onStart;
 
@@ -580,11 +588,20 @@ class _TourSettings extends StatelessWidget {
               selected: {placement},
               onSelectionChanged: (s) => onPlacement(s.single),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Close button'),
-              value: close,
-              onChanged: onClose,
+            const SizedBox(height: 12),
+            const Text('Close button'),
+            const SizedBox(height: 8),
+            SegmentedButton<_Close>(
+              segments: const [
+                ButtonSegment(value: _Close.off, label: Text('Off')),
+                ButtonSegment(value: _Close.bubble, label: Text('In bubble')),
+                ButtonSegment(
+                  value: _Close.screen,
+                  label: Text('Screen corner'),
+                ),
+              ],
+              selected: {close},
+              onSelectionChanged: (s) => onClose(s.single),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

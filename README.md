@@ -155,6 +155,10 @@ Pinpoint(
 When the bubble is above or below the target, it goes on the opposite side,
 or past the bubble if there's no room there. It fades with the bubble.
 
+`cornerContent` pins a widget to the screen's top end corner instead, inside
+the safe area, for example a skip button. It moves to another corner when it
+would cover the target or the bubble.
+
 ### Dismissing
 
 With `dismissible: true`, the default, the user can close the bubble by
@@ -257,7 +261,11 @@ PinpointTour(
 - `outside` puts round Previous and pill-shaped Next buttons on the other
   side of the target; `inside` puts them in the bubble, under the content.
 - Previous is hidden on the first step, and Next reads Done on the last.
-- The close button sits in the bubble's top corner and skips the tour.
+- The close button skips the tour. It sits in the bubble's top corner, or
+  with `closePlacement: PinpointClosePlacement.screen`, in the screen's top
+  corner (top right, or top left in right-to-left), inside the safe area.
+  If that corner would cover the target or the bubble, it moves to the next
+  free corner.
 - Change the text with `nextLabel`, `doneLabel`, `previousLabel` and
   `closeLabel`, hide Previous with `showPrevious: false`, or draw your own
   buttons with `builder: (context, tour) => ...`.

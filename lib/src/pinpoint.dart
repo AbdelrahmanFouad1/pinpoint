@@ -61,6 +61,7 @@ class Pinpoint extends StatefulWidget {
     this.animationDuration = const Duration(milliseconds: 180),
     this.outsideContent,
     this.outsideGap = 16,
+    this.cornerContent,
   });
 
   /// Shows and hides the bubble.
@@ -121,6 +122,14 @@ class Pinpoint extends StatefulWidget {
   /// The distance between [outsideContent] and [child], or the spotlight
   /// hole around it.
   final double outsideGap;
+
+  /// Builds a widget pinned to the top corner of the screen at the end of
+  /// the reading direction (top right, or top left in right-to-left), inside
+  /// the safe area, while the bubble shows. For example, a close or skip
+  /// button. If that corner would cover [child] or the bubble, it moves to
+  /// the bottom end, top start or bottom start corner. It fades with the
+  /// bubble, and tapping it doesn't count as tapping outside.
+  final PinpointContentBuilder? cornerContent;
 
   @override
   State<Pinpoint> createState() => _PinpointState();
@@ -324,6 +333,13 @@ class _PinpointState extends State<Pinpoint>
         arrow: style.arrow ?? const PinpointArrow(),
         animation: _animation,
         outsideGap: widget.outsideGap,
+        corner: widget.cornerContent == null
+            ? null
+            : Builder(
+                builder: (context) =>
+                    widget.cornerContent!(context, widget.controller),
+              ),
+        cornerInsets: MediaQuery.paddingOf(context) + const EdgeInsets.all(8),
         outside: widget.outsideContent == null
             ? null
             : Builder(

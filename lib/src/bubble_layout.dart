@@ -14,6 +14,9 @@ enum PinpointLayoutSlot {
   /// The widget placed on the other side of the target, see
   /// [placePinpointCompanion].
   outside,
+
+  /// The widget placed in a corner of the screen, see [placePinpointCorner].
+  corner,
 }
 
 /// Fills the overlay, places its [child] next to [target], and paints the
@@ -44,6 +47,8 @@ class PinpointBubbleLayout
     required this.child,
     this.outside,
     this.outsideGap = 16,
+    this.corner,
+    this.cornerInsets = EdgeInsets.zero,
   });
 
   /// The bubble's content.
@@ -55,6 +60,13 @@ class PinpointBubbleLayout
   /// The distance between [outside] and the target.
   final double outsideGap;
 
+  /// A widget placed in a corner of the screen, clear of the target, the
+  /// bubble and [outside].
+  final Widget? corner;
+
+  /// How far [corner] stays from the screen's edges.
+  final EdgeInsets cornerInsets;
+
   @override
   Iterable<PinpointLayoutSlot> get slots => PinpointLayoutSlot.values;
 
@@ -62,6 +74,7 @@ class PinpointBubbleLayout
   Widget? childForSlot(PinpointLayoutSlot slot) => switch (slot) {
     PinpointLayoutSlot.bubble => child,
     PinpointLayoutSlot.outside => outside,
+    PinpointLayoutSlot.corner => corner,
   };
 
   /// The target's rect, in the overlay's coordinates.
@@ -122,6 +135,7 @@ class PinpointBubbleLayout
       arrow: arrow,
       animation: animation,
       outsideGap: outsideGap,
+      cornerInsets: cornerInsets,
     );
   }
 
@@ -145,7 +159,8 @@ class PinpointBubbleLayout
       ..shadows = shadows
       ..arrow = arrow
       ..animation = animation
-      ..outsideGap = outsideGap;
+      ..outsideGap = outsideGap
+      ..cornerInsets = cornerInsets;
   }
 }
 
@@ -169,7 +184,9 @@ class RenderPinpointBubbleLayout extends RenderBox
     required PinpointArrow arrow,
     required Animation<double> animation,
     double outsideGap = 16,
+    EdgeInsets cornerInsets = EdgeInsets.zero,
   }) : _target = target,
+       _cornerInsets = cornerInsets,
        _outsideGap = outsideGap,
        _visible = visible,
        _direction = direction,
@@ -192,6 +209,11 @@ class RenderPinpointBubbleLayout extends RenderBox
 
   RenderBox? get _bubble => childForSlot(PinpointLayoutSlot.bubble);
   RenderBox? get _outside => childForSlot(PinpointLayoutSlot.outside);
+  RenderBox? get _corner => childForSlot(PinpointLayoutSlot.corner);
+
+  EdgeInsets _cornerInsets;
+  set cornerInsets(EdgeInsets value) =>
+      _setLayout(_cornerInsets, value, (v) => _cornerInsets = v);
 
   // Layout inputs.
   double _outsideGap;
@@ -350,6 +372,26 @@ class RenderPinpointBubbleLayout extends RenderBox
         spacing: _outsideGap,
       );
     }
+
+    final corner = _corner;
+    if (corner != null) {
+      corner.layout(
+        BoxConstraints.loose(size).deflate(_cornerInsets),
+        parentUsesSize: true,
+      );
+      (corner.parentData! as BoxParentData).offset = placePinpointCorner(
+        size: corner.size,
+        overlay: size,
+        textDirection: _textDirection,
+        insets: _cornerInsets,
+        avoid: [
+          _target,
+          geometry.offset & _bubbleSize,
+          if (outside != null)
+            (outside.parentData! as BoxParentData).offset & outside.size,
+        ],
+      );
+    }
   }
 
   Path _path() {
@@ -382,17 +424,17 @@ class RenderPinpointBubbleLayout extends RenderBox
     final t = _animation.value;
     if (t == 0 || !_visible) return;
 
-    // The outside widget fades with the bubble, without growing.
-    final outside = _outside;
-    if (outside != null) {
-      final at = offset + (outside.parentData! as BoxParentData).offset;
+    // The outside and corner widgets fade with the bubble, without growing.
+    for (final extra in [_outside, _corner]) {
+      if (extra == null) continue;
+      final at = offset + (extra.parentData! as BoxParentData).offset;
       if (t == 1) {
-        context.paintChild(outside, at);
+        context.paintChild(extra, at);
       } else {
         context.pushOpacity(
           offset,
           (t * 255).round(),
-          (context, _) => context.paintChild(outside, at),
+          (context, _) => context.paintChild(extra, at),
         );
       }
     }
@@ -459,6 +501,7 @@ class RenderPinpointBubbleLayout extends RenderBox
     // The bubble is read before what's outside it.
     if (_bubble case final bubble?) visitor(bubble);
     if (_outside case final outside?) visitor(outside);
+    if (_corner case final corner?) visitor(corner);
   }
 
   bool get _hittable => _geometry != null && _visible && _animation.value > 0;
@@ -466,7 +509,7 @@ class RenderPinpointBubbleLayout extends RenderBox
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     if (!_hittable) return false;
-    for (final child in [_bubble, _outside]) {
+    for (final child in [_corner, _bubble, _outside]) {
       if (child == null) continue;
       final hit = result.addWithPaintOffset(
         offset: (child.parentData! as BoxParentData).offset,

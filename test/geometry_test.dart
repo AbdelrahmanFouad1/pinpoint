@@ -216,4 +216,36 @@ void main() {
       expect(place(AxisDirection.up, anchor: nearLeft).dx, 12);
     });
   });
+
+  group('corner', () {
+    const size = Size(48, 48);
+    const insets = EdgeInsets.all(8);
+
+    Offset place({
+      TextDirection textDirection = TextDirection.ltr,
+      List<Rect> avoid = const [],
+    }) => placePinpointCorner(
+      size: size,
+      overlay: overlay,
+      textDirection: textDirection,
+      insets: insets,
+      avoid: avoid,
+    );
+
+    test('top end, following the reading direction', () {
+      expect(place(), const Offset(344, 8));
+      expect(place(textDirection: TextDirection.rtl), const Offset(8, 8));
+    });
+
+    test('moves on to the next free corner', () {
+      const topRight = Rect.fromLTWH(330, 0, 70, 70);
+      expect(place(avoid: [topRight]), const Offset(344, 744));
+      const bottomRight = Rect.fromLTWH(330, 730, 70, 70);
+      expect(place(avoid: [topRight, bottomRight]), const Offset(8, 8));
+    });
+
+    test('stays in the first corner when every corner is taken', () {
+      expect(place(avoid: [Offset.zero & overlay]), const Offset(344, 8));
+    });
+  });
 }

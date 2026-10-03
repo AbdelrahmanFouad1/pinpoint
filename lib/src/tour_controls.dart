@@ -13,6 +13,16 @@ enum PinpointControlsPlacement {
   outside,
 }
 
+/// Where a tour's close button goes.
+enum PinpointClosePlacement {
+  /// In the bubble's top corner, at the end of the reading direction.
+  bubble,
+
+  /// In the screen's top corner, at the end of the reading direction,
+  /// inside the safe area. See [Pinpoint.cornerContent].
+  screen,
+}
+
 /// Built-in buttons for moving through a [PinpointTour]: Next (Done on the
 /// last step), Previous, and an optional close button that skips the tour.
 ///
@@ -36,6 +46,7 @@ class PinpointTourControls {
     this.placement = PinpointControlsPlacement.outside,
     this.showPrevious = true,
     this.showClose = false,
+    this.closePlacement = PinpointClosePlacement.bubble,
     this.nextLabel = 'Next',
     this.doneLabel = 'Done',
     this.previousLabel = 'Previous',
@@ -43,15 +54,17 @@ class PinpointTourControls {
     this.builder,
   });
 
-  /// Where the Next and Previous buttons go. The close button is always in
-  /// the bubble's top corner, at the end of the reading direction.
+  /// Where the Next and Previous buttons go.
   final PinpointControlsPlacement placement;
 
   /// Whether to show a Previous button, on every step but the first.
   final bool showPrevious;
 
-  /// Whether to show a close button in the bubble, which skips the tour.
+  /// Whether to show a close button, which skips the tour.
   final bool showClose;
+
+  /// Where the close button goes: in the bubble, or in the screen's corner.
+  final PinpointClosePlacement closePlacement;
 
   /// The Next button's text.
   final String nextLabel;
@@ -76,6 +89,7 @@ class PinpointTourControls {
       other.placement == placement &&
       other.showPrevious == showPrevious &&
       other.showClose == showClose &&
+      other.closePlacement == closePlacement &&
       other.nextLabel == nextLabel &&
       other.doneLabel == doneLabel &&
       other.previousLabel == previousLabel &&
@@ -87,6 +101,7 @@ class PinpointTourControls {
     placement,
     showPrevious,
     showClose,
+    closePlacement,
     nextLabel,
     doneLabel,
     previousLabel,
@@ -178,6 +193,43 @@ class PinpointTourButtons extends StatelessWidget {
           label: Text(next),
         ),
       ],
+    );
+  }
+}
+
+/// The default close button for [PinpointClosePlacement.screen]: a round
+/// raised button that stands out against the barrier.
+class PinpointTourCloseButton extends StatelessWidget {
+  /// Creates a close button that skips [tour].
+  const PinpointTourCloseButton({
+    super.key,
+    required this.tour,
+    required this.controls,
+  });
+
+  /// The tour the button skips.
+  final PinpointTour tour;
+
+  /// The labels and options.
+  final PinpointTourControls controls;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: controls.closeLabel,
+      child: ElevatedButton(
+        onPressed: tour.skip,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: scheme.surface,
+          foregroundColor: scheme.onSurface,
+          elevation: 4,
+          shape: const CircleBorder(),
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+        ),
+        child: const Icon(Icons.close),
+      ),
     );
   }
 }

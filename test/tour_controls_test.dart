@@ -175,4 +175,118 @@ void main() {
     await start(tester, tour);
     expect(find.text('Next'), findsNothing);
   });
+
+  group('close button in the screen corner', () {
+    const controls = PinpointTourControls(
+      showClose: true,
+      closePlacement: PinpointClosePlacement.screen,
+    );
+
+    Future<void> startIn(
+      WidgetTester tester,
+      PinpointTour tour, {
+      TextDirection textDirection = TextDirection.ltr,
+      EdgeInsets safeArea = EdgeInsets.zero,
+    }) async {
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(size: const Size(800, 600), padding: safeArea),
+          child: app(textDirection: textDirection),
+        ),
+      );
+      tour.start();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('sits in the top end corner and skips the tour', (
+      tester,
+    ) async {
+      final tour = makeTour(controls);
+      await startIn(tester, tour);
+
+      final close = tester.getRect(find.byTooltip('Close'));
+      expect(close.top, 8);
+      expect(close.right, 800 - 8);
+      // Not inside the bubble.
+      final step = tester.getRect(find.text('Step a'));
+      expect(close.overlaps(step.inflate(40)), isFalse);
+
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(events, ['skip']);
+      expect(find.byTooltip('Close'), findsNothing);
+    });
+
+    testWidgets('moves to the top left in RTL', (tester) async {
+      final tour = makeTour(controls);
+      await startIn(tester, tour, textDirection: TextDirection.rtl);
+      final close = tester.getRect(find.byTooltip('Close'));
+      expect(close.left, 8);
+      expect(close.top, 8);
+    });
+
+    testWidgets('stays inside the safe area', (tester) async {
+      final tour = makeTour(controls);
+      await startIn(
+        tester,
+        tour,
+        safeArea: const EdgeInsets.only(top: 44, right: 20),
+      );
+      final close = tester.getRect(find.byTooltip('Close'));
+      expect(close.top, 44 + 8);
+      expect(close.right, 800 - 20 - 8);
+    });
+
+    testWidgets('stays with the tour from step to step', (tester) async {
+      final tour = makeTour(controls);
+      await startIn(tester, tour);
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(tour.currentIndex, 1);
+      expect(find.byTooltip('Close'), findsOneWidget);
+    });
+  });
+
+  testWidgets('the screen close button avoids a target in its corner', (
+    tester,
+  ) async {
+    final tour = PinpointTour(
+      highlight: const PinpointHighlight.none(),
+      controls: const PinpointTourControls(
+        showClose: true,
+        closePlacement: PinpointClosePlacement.screen,
+      ),
+      steps: [
+        PinpointStep(
+          targetId: 'corner',
+          direction: PinpointDirection.bottom,
+          content: (context, tour) => const Text('Step corner'),
+        ),
+      ],
+    );
+    addTearDown(tour.dispose);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topRight,
+            child: PinpointTarget(
+              id: 'corner',
+              child: SizedBox(key: Key('corner'), width: 48, height: 48),
+            ),
+          ),
+        ),
+      ),
+    );
+    tour.start();
+    await tester.pumpAndSettle();
+
+    final close = tester.getRect(find.byTooltip('Close'));
+    final target = tester.getRect(find.byKey(const Key('corner')));
+    final bubble = tester.getRect(find.text('Step corner'));
+    expect(close.overlaps(target), isFalse);
+    expect(close.overlaps(bubble), isFalse);
+    expect(close.bottom, 600 - 8, reason: 'moved to the bottom end corner');
+  });
 }

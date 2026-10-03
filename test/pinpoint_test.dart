@@ -230,4 +230,41 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('cornerContent: tapping it does not count as outside', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Pinpoint(
+              controller: controller,
+              content: (context, controller) => const Text('Bubble'),
+              cornerContent: (context, controller) => TextButton(
+                onPressed: () => taps++,
+                child: const Text('Corner'),
+              ),
+              child: const SizedBox(width: 100, height: 40),
+            ),
+          ),
+        ),
+      ),
+    );
+    controller.show();
+    await tester.pumpAndSettle();
+    final corner = tester.getRect(find.text('Corner'));
+    expect(corner.top, lessThan(60));
+    expect(corner.right, greaterThan(700));
+
+    await tester.tap(find.text('Corner'));
+    await tester.pumpAndSettle();
+    expect(taps, 1);
+    expect(controller.isShowing, isTrue);
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(find.text('Corner'), findsNothing);
+  });
 }
