@@ -27,6 +27,7 @@ class PinpointStep {
     this.style,
     this.highlight,
     this.gap,
+    this.advanceOnTargetTap,
   });
 
   /// The id of the [PinpointTarget] this step points at.
@@ -49,6 +50,10 @@ class PinpointStep {
 
   /// The distance between the arrow's tip and the target.
   final double? gap;
+
+  /// Whether tapping the target moves to the next step. The target still
+  /// gets the tap too, so a button runs its own action as well.
+  final bool? advanceOnTargetTap;
 }
 
 /// Walks the user through a series of [PinpointStep]s, one bubble at a
@@ -85,6 +90,7 @@ class PinpointTour extends ChangeNotifier {
     this.style,
     this.highlight = const PinpointHighlight.spotlight(),
     this.gap = 4,
+    this.advanceOnTargetTap = false,
     this.dismissible = false,
     this.scrollDuration = const Duration(milliseconds: 300),
     this.onFinish,
@@ -109,6 +115,10 @@ class PinpointTour extends ChangeNotifier {
 
   /// The default distance between the arrow's tip and the target.
   final double gap;
+
+  /// Whether tapping a step's target moves to the next step, unless the
+  /// step says otherwise. See [PinpointStep.advanceOnTargetTap].
+  final bool advanceOnTargetTap;
 
   /// Whether the user can skip the tour from outside the bubble: by tapping
   /// outside it and its target, by pressing Escape, or with the screen

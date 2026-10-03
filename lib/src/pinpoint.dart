@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import 'arrow.dart';
@@ -127,6 +128,7 @@ class _PinpointState extends State<Pinpoint>
       _overlay.show();
       _animation.value = 1;
       HardwareKeyboard.instance.addHandler(_handleKey);
+      _raise();
     }
   }
 
@@ -146,6 +148,10 @@ class _PinpointState extends State<Pinpoint>
   @override
   void didUpdateWidget(Pinpoint oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.highlight.hasBarrier != widget.highlight.hasBarrier &&
+        widget.controller.isShowing) {
+      _raise();
+    }
     _updateDuration();
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_sync);
@@ -158,6 +164,7 @@ class _PinpointState extends State<Pinpoint>
   void dispose() {
     widget.controller.removeListener(_sync);
     HardwareKeyboard.instance.removeHandler(_handleKey);
+    _modal.remove(this);
     _animation.dispose();
     super.dispose();
   }
@@ -167,11 +174,38 @@ class _PinpointState extends State<Pinpoint>
       _overlay.show();
       _animation.forward();
       HardwareKeyboard.instance.addHandler(_handleKey);
+      _raise();
     } else {
       HardwareKeyboard.instance.removeHandler(_handleKey);
+      _modal.remove(this);
       _animation.reverse().whenCompleteOrCancel(() {
         if (mounted && !widget.controller.isShowing) _overlay.hide();
       });
+    }
+  }
+
+  // Showing bubbles with a barrier, oldest first. They're kept above
+  // bubbles without one, so nothing appears on top of a dimmed screen.
+  static final List<_PinpointState> _modal = [];
+
+  void _raise() {
+    // Bringing other bubbles forward rebuilds them, which can't happen in
+    // the middle of a build.
+    final binding = SchedulerBinding.instance;
+    if (binding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      binding.addPostFrameCallback((_) {
+        if (mounted && widget.controller.isShowing) _raise();
+      });
+      return;
+    }
+    _modal.remove(this);
+    if (widget.highlight.hasBarrier) {
+      _overlay.show(); // Brings it to the top.
+      _modal.add(this);
+    } else {
+      for (final modal in List.of(_modal)) {
+        modal._overlay.show();
+      }
     }
   }
 

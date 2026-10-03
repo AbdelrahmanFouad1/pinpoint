@@ -163,4 +163,54 @@ void main() {
       expect(bubble.bottom, lessThanOrEqualTo(targetRect(tester).top - 8));
     });
   });
+
+  group('stacking', () {
+    testWidgets('a bubble shown later stays under an open barrier', (
+      tester,
+    ) async {
+      final modal = PinpointController();
+      final plain = PinpointController();
+      addTearDown(modal.dispose);
+      addTearDown(plain.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Pinpoint(
+                  controller: modal,
+                  highlight: const PinpointHighlight.dim(),
+                  content: (context, controller) => const Text('Modal'),
+                  child: const SizedBox(width: 100, height: 40),
+                ),
+                const SizedBox(height: 100),
+                Pinpoint(
+                  controller: plain,
+                  content: (context, controller) => const Text('Plain'),
+                  child: const SizedBox(width: 100, height: 40),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      modal.show();
+      await tester.pumpAndSettle();
+      plain.show();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modal').hitTestable(), findsOneWidget);
+      expect(
+        find.text('Plain').hitTestable(),
+        findsNothing,
+        reason: 'covered by the dim barrier',
+      );
+
+      // Once the barrier is gone, the plain bubble is reachable.
+      modal.hide();
+      await tester.pumpAndSettle();
+      expect(find.text('Plain').hitTestable(), findsOneWidget);
+    });
+  });
 }

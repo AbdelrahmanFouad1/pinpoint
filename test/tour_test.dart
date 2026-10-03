@@ -264,4 +264,112 @@ void main() {
     await tester.pumpAndSettle();
     expect(indexes, [0, 1, null]);
   });
+
+  group('advanceOnTargetTap', () {
+    late int buttonTaps;
+
+    Widget buttonApp() {
+      buttonTaps = 0;
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PinpointTarget(
+                  id: 'a',
+                  child: ElevatedButton(
+                    key: const Key('button'),
+                    onPressed: () => buttonTaps++,
+                    child: const Text('Button'),
+                  ),
+                ),
+                const SizedBox(height: 120),
+                target('b'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    PinpointTour tourWith({bool tourDefault = false, bool? stepValue}) =>
+        PinpointTour(
+          steps: [
+            PinpointStep(
+              targetId: 'a',
+              advanceOnTargetTap: stepValue,
+              content: (context, tour) => const Text('Step a'),
+            ),
+            step('b'),
+          ],
+          advanceOnTargetTap: tourDefault,
+        );
+
+    testWidgets('tapping the target advances, and the target gets the tap', (
+      tester,
+    ) async {
+      final tour = tourWith(tourDefault: true);
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(buttonApp());
+      tour.start();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('button')));
+      await tester.pumpAndSettle();
+      expect(buttonTaps, 1);
+      expect(tour.currentIndex, 1);
+      expect(find.text('Step b'), findsOneWidget);
+    });
+
+    testWidgets('is off by default', (tester) async {
+      final tour = tourWith();
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(buttonApp());
+      tour.start();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('button')));
+      await tester.pumpAndSettle();
+      expect(buttonTaps, 1);
+      expect(tour.currentIndex, 0);
+    });
+
+    testWidgets('a step overrides the tour', (tester) async {
+      final tour = tourWith(stepValue: true);
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(buttonApp());
+      tour.start();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('button')));
+      await tester.pumpAndSettle();
+      expect(tour.currentIndex, 1);
+    });
+
+    testWidgets('dragging on the target does not advance', (tester) async {
+      final tour = tourWith(tourDefault: true);
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(buttonApp());
+      tour.start();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byKey(const Key('button')), const Offset(60, 0));
+      await tester.pumpAndSettle();
+      expect(tour.currentIndex, 0);
+    });
+
+    testWidgets('tapping the target outside a tour does nothing', (
+      tester,
+    ) async {
+      final tour = tourWith(tourDefault: true);
+      addTearDown(tour.dispose);
+      await tester.pumpWidget(buttonApp());
+
+      await tester.tap(find.byKey(const Key('button')));
+      await tester.pumpAndSettle();
+      expect(buttonTaps, 1);
+      expect(tour.isActive, isFalse);
+    });
+  });
 }

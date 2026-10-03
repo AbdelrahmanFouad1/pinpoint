@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -174,15 +175,43 @@ class _PinpointTargetState extends State<PinpointTarget>
     _controller.hide();
   }
 
+  // Where the pointer went down on the target, to tell taps from drags.
+  int? _pointer;
+  Offset? _downPosition;
+
+  void _handlePointerUp(PointerUpEvent event) {
+    final down = _downPosition;
+    final wasTap =
+        event.pointer == _pointer &&
+        down != null &&
+        (event.position - down).distance < kTouchSlop;
+    _pointer = null;
+    _downPosition = null;
+    final step = _step, tour = _tour;
+    if (!wasTap || !_active || step == null || tour == null) return;
+    if (step.advanceOnTargetTap ?? tour.advanceOnTargetTap) tour.next();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Always there, so starting a tour doesn't rebuild the target's subtree.
+    final child = Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        _pointer = event.pointer;
+        _downPosition = event.position;
+      },
+      onPointerUp: _handlePointerUp,
+      onPointerCancel: (_) => _pointer = _downPosition = null,
+      child: widget.child,
+    );
     final step = _step;
     final tour = _tour;
     if (step == null || tour == null) {
       return Pinpoint(
         controller: _controller,
         content: (_, _) => const SizedBox.shrink(),
-        child: widget.child,
+        child: child,
       );
     }
     return Pinpoint(
@@ -194,7 +223,7 @@ class _PinpointTargetState extends State<PinpointTarget>
       gap: step.gap ?? tour.gap,
       dismissible: tour.dismissible,
       content: (context, _) => step.content(context, tour),
-      child: widget.child,
+      child: child,
     );
   }
 }
