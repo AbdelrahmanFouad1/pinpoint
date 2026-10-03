@@ -162,7 +162,11 @@ class PinpointTourButtons extends StatelessWidget {
       foregroundColor: scheme.primary,
       elevation: 4,
       minimumSize: const Size(56, 56),
-      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+      // From the theme's button text, so it keeps the app's font.
+      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
     );
     return Row(
       mainAxisSize: MainAxisSize.min,

@@ -14,6 +14,10 @@ topics:
 screenshots:
   - description: A guided tour with pulse and iris spotlight animations.
     path: screenshots/tour.gif
+  - description: Tour buttons outside the bubble, and a close button in the screen corner.
+    path: screenshots/controls.gif
+  - description: A tour across screens, with demo data until it ends.
+    path: screenshots/multiscreen.gif
   - description: A bubble anchored to a button, lined up with its end.
     path: screenshots/anchor.png
   - description: A spotlight on a card, with the bubble above the hole.

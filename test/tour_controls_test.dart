@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinpoint/pinpoint.dart';
 
@@ -288,5 +289,30 @@ void main() {
     expect(close.overlaps(target), isFalse);
     expect(close.overlaps(bubble), isFalse);
     expect(close.bottom, 600 - 8, reason: 'moved to the bottom end corner');
+  });
+
+  testWidgets('the buttons keep the app font', (tester) async {
+    final tour = makeTour(const PinpointTourControls());
+    addTearDown(tour.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'IBMPlexSansArabic'),
+        home: const Scaffold(
+          body: Center(
+            child: PinpointTarget(
+              id: 'a',
+              child: SizedBox(width: 80, height: 40),
+            ),
+          ),
+        ),
+      ),
+    );
+    tour.start();
+    await tester.pumpAndSettle();
+    final style = tester
+        .renderObject<RenderParagraph>(find.text('Next'))
+        .text
+        .style!;
+    expect(style.fontFamily, 'IBMPlexSansArabic');
   });
 }

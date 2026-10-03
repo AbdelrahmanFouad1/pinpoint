@@ -39,7 +39,8 @@ The API is now stable.
   target when it appears. Both respect reduced motion.
 * Bubbles with a dim or spotlight barrier stay above bubbles shown after
   them.
-* An animated tour in the README, and a recipe for showing a tour once.
+* README animations of spotlight animations, tour buttons and multi-screen
+  tours, rendered from the example app; a recipe for showing a tour once.
 
 ## 0.1.0
 
