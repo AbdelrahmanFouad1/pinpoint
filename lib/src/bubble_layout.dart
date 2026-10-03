@@ -6,13 +6,25 @@ import 'bubble_border.dart';
 import 'direction.dart';
 import 'geometry.dart';
 
-/// Fills the overlay, places its child next to [target], and paints the
-/// bubble shape behind it.
+/// The children of a [PinpointBubbleLayout].
+enum PinpointLayoutSlot {
+  /// The bubble's content.
+  bubble,
+
+  /// The widget placed on the other side of the target, see
+  /// [placePinpointCompanion].
+  outside,
+}
+
+/// Fills the overlay, places its [child] next to [target], and paints the
+/// bubble shape behind it. An optional [outside] widget goes on the other
+/// side of the target.
 ///
 /// The arrow's position depends on where the bubble lands, which is only
 /// known after the child is measured, so this is done in a single render
 /// object instead of a decoration on the child.
-class PinpointBubbleLayout extends SingleChildRenderObjectWidget {
+class PinpointBubbleLayout
+    extends SlottedMultiChildRenderObjectWidget<PinpointLayoutSlot, RenderBox> {
   /// Creates a bubble layout.
   const PinpointBubbleLayout({
     super.key,
@@ -29,8 +41,28 @@ class PinpointBubbleLayout extends SingleChildRenderObjectWidget {
     required this.shadows,
     required this.arrow,
     required this.animation,
-    required Widget super.child,
+    required this.child,
+    this.outside,
+    this.outsideGap = 16,
   });
+
+  /// The bubble's content.
+  final Widget child;
+
+  /// A widget placed on the other side of the target, outside the bubble.
+  final Widget? outside;
+
+  /// The distance between [outside] and the target.
+  final double outsideGap;
+
+  @override
+  Iterable<PinpointLayoutSlot> get slots => PinpointLayoutSlot.values;
+
+  @override
+  Widget? childForSlot(PinpointLayoutSlot slot) => switch (slot) {
+    PinpointLayoutSlot.bubble => child,
+    PinpointLayoutSlot.outside => outside,
+  };
 
   /// The target's rect, in the overlay's coordinates.
   final Rect target;
@@ -89,6 +121,7 @@ class PinpointBubbleLayout extends SingleChildRenderObjectWidget {
       shadows: shadows,
       arrow: arrow,
       animation: animation,
+      outsideGap: outsideGap,
     );
   }
 
@@ -111,13 +144,14 @@ class PinpointBubbleLayout extends SingleChildRenderObjectWidget {
       ..side = side
       ..shadows = shadows
       ..arrow = arrow
-      ..animation = animation;
+      ..animation = animation
+      ..outsideGap = outsideGap;
   }
 }
 
 /// The render object behind [PinpointBubbleLayout].
 class RenderPinpointBubbleLayout extends RenderBox
-    with RenderObjectWithChildMixin<RenderBox> {
+    with SlottedContainerRenderObjectMixin<PinpointLayoutSlot, RenderBox> {
   /// Creates the render object.
   RenderPinpointBubbleLayout({
     required Rect target,
@@ -134,7 +168,9 @@ class RenderPinpointBubbleLayout extends RenderBox
     required List<BoxShadow> shadows,
     required PinpointArrow arrow,
     required Animation<double> animation,
+    double outsideGap = 16,
   }) : _target = target,
+       _outsideGap = outsideGap,
        _visible = visible,
        _direction = direction,
        _alignment = alignment,
@@ -154,7 +190,13 @@ class RenderPinpointBubbleLayout extends RenderBox
   PinpointGeometry? _geometry;
   Size _bubbleSize = Size.zero;
 
+  RenderBox? get _bubble => childForSlot(PinpointLayoutSlot.bubble);
+  RenderBox? get _outside => childForSlot(PinpointLayoutSlot.outside);
+
   // Layout inputs.
+  double _outsideGap;
+  set outsideGap(double value) =>
+      _setLayout(_outsideGap, value, (v) => _outsideGap = v);
   Rect _target;
   set target(Rect value) => _setLayout(_target, value, (v) => _target = v);
   PinpointDirection _direction;
@@ -249,7 +291,7 @@ class RenderPinpointBubbleLayout extends RenderBox
 
   @override
   void performLayout() {
-    final child = this.child;
+    final child = _bubble;
     if (child == null) {
       _geometry = null;
       _updateSemanticsVisibility();
@@ -291,6 +333,23 @@ class RenderPinpointBubbleLayout extends RenderBox
     ).dimensions.resolve(_textDirection);
     (child.parentData! as BoxParentData).offset =
         geometry.offset + Offset(insets.left, insets.top);
+
+    final outside = _outside;
+    if (outside != null) {
+      outside.layout(
+        BoxConstraints.loose(size).deflate(margin),
+        parentUsesSize: true,
+      );
+      (outside.parentData! as BoxParentData).offset = placePinpointCompanion(
+        anchor: _target,
+        bubble: geometry.offset & _bubbleSize,
+        bubbleSide: flipAxisDirection(geometry.arrowDirection),
+        size: outside.size,
+        overlay: size,
+        margin: margin,
+        spacing: _outsideGap,
+      );
+    }
   }
 
   Path _path() {
@@ -314,14 +373,29 @@ class RenderPinpointBubbleLayout extends RenderBox
   }
 
   @override
-  bool get alwaysNeedsCompositing => child != null;
+  bool get alwaysNeedsCompositing => _bubble != null;
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final child = this.child;
+    final child = _bubble;
     if (child == null || _geometry == null) return;
     final t = _animation.value;
     if (t == 0 || !_visible) return;
+
+    // The outside widget fades with the bubble, without growing.
+    final outside = _outside;
+    if (outside != null) {
+      final at = offset + (outside.parentData! as BoxParentData).offset;
+      if (t == 1) {
+        context.paintChild(outside, at);
+      } else {
+        context.pushOpacity(
+          offset,
+          (t * 255).round(),
+          (context, _) => context.paintChild(outside, at),
+        );
+      }
+    }
 
     void paintBubble(PaintingContext context, Offset offset) {
       final path = _path().shift(offset);
@@ -381,24 +455,28 @@ class RenderPinpointBubbleLayout extends RenderBox
 
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
-    if (_semanticsVisible) super.visitChildrenForSemantics(visitor);
+    if (!_semanticsVisible) return;
+    // The bubble is read before what's outside it.
+    if (_bubble case final bubble?) visitor(bubble);
+    if (_outside case final outside?) visitor(outside);
   }
 
   bool get _hittable => _geometry != null && _visible && _animation.value > 0;
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    final child = this.child;
-    if (child == null || !_hittable) {
-      return false;
+    if (!_hittable) return false;
+    for (final child in [_bubble, _outside]) {
+      if (child == null) continue;
+      final hit = result.addWithPaintOffset(
+        offset: (child.parentData! as BoxParentData).offset,
+        position: position,
+        hitTest: (result, transformed) =>
+            child.hitTest(result, position: transformed),
+      );
+      if (hit) return true;
     }
-    final childOffset = (child.parentData! as BoxParentData).offset;
-    return result.addWithPaintOffset(
-      offset: childOffset,
-      position: position,
-      hitTest: (result, transformed) =>
-          child.hitTest(result, position: transformed),
-    );
+    return false;
   }
 
   // Taps on the bubble's padding or arrow land on the bubble; taps anywhere

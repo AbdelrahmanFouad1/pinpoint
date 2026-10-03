@@ -59,6 +59,8 @@ class Pinpoint extends StatefulWidget {
     this.autoFlip = true,
     this.dismissible = true,
     this.animationDuration = const Duration(milliseconds: 180),
+    this.outsideContent,
+    this.outsideGap = 16,
   });
 
   /// Shows and hides the bubble.
@@ -106,6 +108,19 @@ class Pinpoint extends StatefulWidget {
   /// How long the bubble takes to appear and disappear. Ignored when the
   /// platform asks for reduced motion, see [MediaQueryData.disableAnimations].
   final Duration animationDuration;
+
+  /// Builds a widget shown outside the bubble, on the other side of [child],
+  /// for example action buttons under a spotlighted element.
+  ///
+  /// When the bubble is above or below [child], this widget goes on the
+  /// opposite side, or past the bubble if there's no room there. When the
+  /// bubble is beside [child], it goes below [child]. It's centered on
+  /// [child] and fades with the bubble.
+  final PinpointContentBuilder? outsideContent;
+
+  /// The distance between [outsideContent] and [child], or the spotlight
+  /// hole around it.
+  final double outsideGap;
 
   @override
   State<Pinpoint> createState() => _PinpointState();
@@ -308,6 +323,13 @@ class _PinpointState extends State<Pinpoint>
         shadows: style.shadows ?? const [],
         arrow: style.arrow ?? const PinpointArrow(),
         animation: _animation,
+        outsideGap: widget.outsideGap,
+        outside: widget.outsideContent == null
+            ? null
+            : Builder(
+                builder: (context) =>
+                    widget.outsideContent!(context, widget.controller),
+              ),
         // Read as one unit, and announced when it appears.
         child: Semantics(
           container: true,

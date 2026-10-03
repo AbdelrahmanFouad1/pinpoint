@@ -1,10 +1,11 @@
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'controller.dart';
 import 'pinpoint.dart';
 import 'tour.dart';
+import 'tour_controls.dart';
 
 /// Marks [child] as a place a [PinpointTour] step can point at.
 ///
@@ -214,6 +215,12 @@ class _PinpointTargetState extends State<PinpointTarget>
         child: child,
       );
     }
+    final controls = (step.showControls ?? true) ? tour.controls : null;
+    final inside = controls?.placement == PinpointControlsPlacement.inside;
+    Widget buttons(BuildContext context) =>
+        controls!.builder?.call(context, tour) ??
+        PinpointTourButtons(tour: tour, controls: controls);
+
     return Pinpoint(
       controller: _controller,
       direction: step.direction ?? tour.direction,
@@ -222,7 +229,36 @@ class _PinpointTargetState extends State<PinpointTarget>
       highlight: step.highlight ?? tour.highlight,
       gap: step.gap ?? tour.gap,
       dismissible: tour.dismissible,
-      content: (context, _) => step.content(context, tour),
+      content: (context, _) {
+        var body = step.content(context, tour);
+        if (controls != null && inside) {
+          body = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [body, const SizedBox(height: 8), buttons(context)],
+          );
+        }
+        if (controls != null && controls.showClose) {
+          body = Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Flexible(child: body),
+              IconButton(
+                onPressed: tour.skip,
+                tooltip: controls.closeLabel,
+                visualDensity: VisualDensity.compact,
+                color: IconTheme.of(context).color,
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          );
+        }
+        return body;
+      },
+      outsideContent: controls != null && !inside
+          ? (context, _) => buttons(context)
+          : null,
       child: child,
     );
   }

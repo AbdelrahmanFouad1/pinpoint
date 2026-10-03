@@ -1,13 +1,15 @@
 # pinpoint example
 
-A tour of the `pinpoint` package:
+A gallery of what `pinpoint` can do. Run it with `flutter run`; the switch
+on the home page flips every demo to right-to-left.
 
-- A bubble anchored under a button, lined up with its end, with a close
-  button.
-- A spotlight on a card.
-- A playground to try every direction, alignment and highlight, in
-  left-to-right and right-to-left.
-- A guided tour across the app bar, the header, a card and a button.
+- **Bubble**: a bubble under a button, lined up with its end, with a close
+  button, and a playground for every direction and alignment.
+- **Spotlight**: none, dim or spotlight; rounded, circle or stadium holes;
+  pulse and iris animations; and a button outside the bubble.
+- **Tour**: a store page with a tour across the app bar, categories,
+  conditions and a button. Choose Next and Previous buttons inside or
+  outside the bubble, a close button, and tapping the target to continue.
 
-Run it with `flutter run`. `lib/screenshots.dart` renders the scenes used
-for the package screenshots.
+`lib/screenshots.dart` renders the scenes used for the package screenshots,
+and `test/capture_gif_test.dart` renders the README animation.

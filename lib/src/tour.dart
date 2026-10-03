@@ -6,6 +6,7 @@ import 'highlight.dart';
 import 'pinpoint.dart' show Pinpoint;
 import 'style.dart';
 import 'target.dart';
+import 'tour_controls.dart';
 
 /// Builds the content of a tour step's bubble. Use [tour] to move between
 /// steps, for example from "Next" and "Skip" buttons.
@@ -28,6 +29,7 @@ class PinpointStep {
     this.highlight,
     this.gap,
     this.advanceOnTargetTap,
+    this.showControls,
   });
 
   /// The id of the [PinpointTarget] this step points at.
@@ -54,6 +56,11 @@ class PinpointStep {
   /// Whether tapping the target moves to the next step. The target still
   /// gets the tap too, so a button runs its own action as well.
   final bool? advanceOnTargetTap;
+
+  /// Whether to show the tour's [PinpointTour.controls] on this step.
+  /// Defaults to true; turn it off, for example, on a step that moves on
+  /// with [advanceOnTargetTap].
+  final bool? showControls;
 }
 
 /// Walks the user through a series of [PinpointStep]s, one bubble at a
@@ -91,6 +98,7 @@ class PinpointTour extends ChangeNotifier {
     this.highlight = const PinpointHighlight.spotlight(),
     this.gap = 4,
     this.advanceOnTargetTap = false,
+    this.controls,
     this.dismissible = false,
     this.scrollDuration = const Duration(milliseconds: 300),
     this.onFinish,
@@ -119,6 +127,10 @@ class PinpointTour extends ChangeNotifier {
   /// Whether tapping a step's target moves to the next step, unless the
   /// step says otherwise. See [PinpointStep.advanceOnTargetTap].
   final bool advanceOnTargetTap;
+
+  /// Built-in Next, Previous and close buttons for every step, or null to
+  /// leave moving through the tour to each step's content.
+  final PinpointTourControls? controls;
 
   /// Whether the user can skip the tour from outside the bubble: by tapping
   /// outside it and its target, by pressing Escape, or with the screen

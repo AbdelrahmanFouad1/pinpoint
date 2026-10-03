@@ -26,7 +26,8 @@ right-to-left layouts work out of the box.
 - **Dim** the screen, or **spotlight** the target through a hole of any
   shape: rounded, circle, stadium. Optionally **pulse** a ring around it, or
   open it like an **iris**.
-- **Guided tours** across widgets anywhere in the app.
+- **Guided tours** across widgets anywhere in the app, with built-in Next,
+  Previous and close buttons inside or outside the bubble.
 - **Full control over the look**: color, corners, padding, border, shadows,
   arrow size. Per bubble, or app-wide with a theme.
 - **RTL-first**: `start` and `end` follow the reading direction.
@@ -133,6 +134,27 @@ reduced motion.
 When several bubbles show at once, the ones with a dim or spotlight barrier
 stay on top, so nothing appears over a dimmed screen.
 
+### Content outside the bubble
+
+`outsideContent` places a widget on the other side of the target, for
+example a button under a spotlighted element:
+
+```dart
+Pinpoint(
+  controller: controller,
+  highlight: const PinpointHighlight.spotlight(),
+  content: (context, controller) => const Text('Your new wallet'),
+  outsideContent: (context, controller) => FilledButton(
+    onPressed: controller.hide,
+    child: const Text('Got it'),
+  ),
+  child: const WalletCard(),
+)
+```
+
+When the bubble is above or below the target, it goes on the opposite side,
+or past the bubble if there's no room there. It fades with the bubble.
+
 ### Dismissing
 
 With `dismissible: true`, the default, the user can close the bubble by
@@ -217,6 +239,31 @@ final tour = PinpointTour(
 
 tour.start();
 ```
+
+### Next, Previous and close buttons
+
+Add `controls` to get the buttons without building them in every step:
+
+```dart
+PinpointTour(
+  controls: const PinpointTourControls(
+    placement: PinpointControlsPlacement.outside, // or inside
+    showClose: true,
+  ),
+  steps: [...],
+)
+```
+
+- `outside` puts round Previous and pill-shaped Next buttons on the other
+  side of the target; `inside` puts them in the bubble, under the content.
+- Previous is hidden on the first step, and Next reads Done on the last.
+- The close button sits in the bubble's top corner and skips the tour.
+- Change the text with `nextLabel`, `doneLabel`, `previousLabel` and
+  `closeLabel`, hide Previous with `showPrevious: false`, or draw your own
+  buttons with `builder: (context, tour) => ...`.
+- A step can turn them off with `showControls: false`.
+
+### Steps
 
 - Inside `content`, use `next()`, `previous()`, `skip()` and `finish()`, and
   `currentIndex`, `length`, `isFirst` and `isLast`.

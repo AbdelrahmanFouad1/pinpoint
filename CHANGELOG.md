@@ -13,6 +13,12 @@ The API is now stable.
 
 **New:**
 
+* `PinpointTourControls`: built-in Next, Previous and close buttons for
+  tours, inside the bubble or outside it on the other side of the target,
+  with custom labels or a custom builder. `PinpointStep.showControls` turns
+  them off for a step.
+* `Pinpoint.outsideContent`: a widget placed outside the bubble, on the
+  other side of the target.
 * `advanceOnTargetTap` on `PinpointTour` and `PinpointStep`: tapping the
   target moves to the next step.
 * Spotlight animations, off by default: `PinpointPulse`, a ring that keeps

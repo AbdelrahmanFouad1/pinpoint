@@ -134,3 +134,41 @@ PinpointGeometry computePinpointGeometry({
     arrowOffset: targetCenter - cross,
   );
 }
+
+/// Places a widget of size [size] next to [anchor], on the side away from
+/// the [bubble], [spacing] pixels from the anchor.
+///
+/// [bubbleSide] is the side of the anchor the bubble sits on. When the
+/// bubble is above or below the anchor, the widget goes on the opposite
+/// side, or past the bubble if that side has no room. When the bubble is
+/// beside the anchor, the widget goes below the anchor, or above it. Either
+/// way it's centered on the anchor and kept inside [margin].
+Offset placePinpointCompanion({
+  required Rect anchor,
+  required Rect bubble,
+  required AxisDirection bubbleSide,
+  required Size size,
+  required Size overlay,
+  EdgeInsets margin = EdgeInsets.zero,
+  double spacing = 0,
+}) {
+  final minY = margin.top;
+  final maxY = overlay.height - margin.bottom - size.height;
+  final below = anchor.bottom + spacing;
+  final above = anchor.top - spacing - size.height;
+
+  final candidates = switch (bubbleSide) {
+    AxisDirection.up => [below, bubble.top - spacing - size.height],
+    AxisDirection.down => [above, bubble.bottom + spacing],
+    AxisDirection.left || AxisDirection.right => [below, above],
+  };
+  final y = candidates.firstWhere(
+    (y) => y >= minY && y <= maxY,
+    orElse: () => math.max(minY, maxY),
+  );
+
+  final x = anchor.center.dx - size.width / 2;
+  final minX = margin.left;
+  final maxX = overlay.width - margin.right - size.width;
+  return Offset(math.max(minX, math.min(x, maxX)), y);
+}

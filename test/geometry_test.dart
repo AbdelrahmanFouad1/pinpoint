@@ -170,4 +170,50 @@ void main() {
       expect(g.offset.dx, 12);
     });
   });
+
+  group('outside content', () {
+    const anchor = Rect.fromLTWH(150, 400, 100, 40);
+    const size = Size(200, 56);
+
+    Offset place(AxisDirection bubbleSide, {Rect anchor = anchor}) =>
+        placePinpointCompanion(
+          anchor: anchor,
+          bubble: switch (bubbleSide) {
+            AxisDirection.up => Rect.fromLTWH(140, anchor.top - 60, 120, 50),
+            AxisDirection.down => Rect.fromLTWH(
+              140,
+              anchor.bottom + 10,
+              120,
+              50,
+            ),
+            _ => Rect.fromLTWH(anchor.right + 10, anchor.top, 120, 50),
+          },
+          bubbleSide: bubbleSide,
+          size: size,
+          overlay: overlay,
+          margin: const EdgeInsets.all(12),
+          spacing: 16,
+        );
+
+    test('goes on the side away from the bubble, centered', () {
+      expect(place(AxisDirection.up), const Offset(100, 456));
+      expect(place(AxisDirection.down), const Offset(100, 328));
+    });
+
+    test('goes below the target when the bubble is beside it', () {
+      expect(place(AxisDirection.right).dy, 456);
+    });
+
+    test('goes past the bubble when the far side has no room', () {
+      // Bubble above a target at the bottom of the screen: no room below.
+      const low = Rect.fromLTWH(150, 720, 100, 40);
+      final at = place(AxisDirection.up, anchor: low);
+      expect(at.dy, 720 - 60 - 16 - 56);
+    });
+
+    test('stays inside the margins horizontally', () {
+      const nearLeft = Rect.fromLTWH(0, 400, 40, 40);
+      expect(place(AxisDirection.up, anchor: nearLeft).dx, 12);
+    });
+  });
 }
