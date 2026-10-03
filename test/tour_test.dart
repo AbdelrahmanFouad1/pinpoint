@@ -262,7 +262,8 @@ void main() {
     await tester.pumpAndSettle();
     tour.next();
     await tester.pumpAndSettle();
-    expect(indexes, [0, 1, null]);
+    // Running from start(), before its first step shows.
+    expect(indexes, [null, 0, 1, null]);
   });
 
   group('advanceOnTargetTap', () {

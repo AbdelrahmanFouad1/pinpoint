@@ -60,4 +60,47 @@ void main() {
     expect(find.text('Each one has its own rate.'), findsNothing);
     expect(find.text('Tour skipped'), findsOneWidget);
   });
+
+  testWidgets('the multi-screen tour shows demo data, then the real data', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await open(tester, 'Multi-screen tour');
+    expect(find.text('0.00'), findsOneWidget);
+
+    await tester.tap(find.text('Start tour'));
+    await run(tester);
+    expect(find.text('1,250.00'), findsOneWidget, reason: 'demo balance');
+    expect(find.text('Your balance'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await run(tester);
+    expect(find.text('Your wallet'), findsOneWidget);
+
+    // Moves to the wallet screen, with sample transactions.
+    await tester.tap(find.text('Next'));
+    await run(tester);
+    expect(find.text('Wallet'), findsOneWidget);
+    expect(find.text('Amazon'), findsOneWidget);
+    expect(find.text('Every purchase'), findsOneWidget);
+
+    // Previous goes back to the home screen.
+    await tester.tap(find.byTooltip('Previous'));
+    await run(tester);
+    expect(find.text('Your wallet'), findsOneWidget);
+    expect(find.text('Amazon'), findsNothing);
+
+    await tester.tap(find.text('Next'));
+    await run(tester);
+    await tester.tap(find.text('Next'));
+    await run(tester);
+    expect(find.text('Withdraw'), findsWidgets);
+
+    // Done: back home, with the real data.
+    await tester.tap(find.text('Done'));
+    await run(tester);
+    expect(find.text('Wallet'), findsNothing);
+    expect(find.text('0.00'), findsOneWidget);
+    expect(find.text('1,250.00'), findsNothing);
+  });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
@@ -90,6 +92,10 @@ abstract interface class PinpointTargetHandle {
   /// Whether the target is still in the tree.
   bool get mounted;
 
+  /// Whether the target is on the top screen, rather than on one covered by
+  /// another route.
+  bool get isOnTopRoute;
+
   /// Scrolls the target into view, if it's inside a scrollable.
   Future<void> reveal(Duration duration);
 
@@ -148,7 +154,26 @@ class _PinpointTargetState extends State<PinpointTarget>
   }
 
   @override
+  bool get isOnTopRoute =>
+      mounted && (ModalRoute.of(context)?.isCurrent ?? true);
+
+  @override
   Future<void> reveal(Duration duration) async {
+    // Let a screen that's sliding in settle first.
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation != null && !animation.isCompleted) {
+      final settled = Completer<void>();
+      void listener(AnimationStatus status) {
+        if (status.isCompleted || status.isDismissed) {
+          animation.removeStatusListener(listener);
+          if (!settled.isCompleted) settled.complete();
+        }
+      }
+
+      animation.addStatusListener(listener);
+      await settled.future;
+      if (!mounted) return;
+    }
     if (Scrollable.maybeOf(context) == null) return;
     await Scrollable.ensureVisible(
       context,

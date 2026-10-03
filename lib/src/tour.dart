@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import 'direction.dart';
 import 'highlight.dart';
 import 'pinpoint.dart' show Pinpoint;
+import 'demo.dart' show PinpointDemo;
 import 'style.dart';
 import 'target.dart';
 import 'tour_controls.dart';
@@ -30,6 +34,8 @@ class PinpointStep {
     this.gap,
     this.advanceOnTargetTap,
     this.showControls,
+    this.onNext,
+    this.onPrevious,
   });
 
   /// The id of the [PinpointTarget] this step points at.
@@ -61,6 +67,23 @@ class PinpointStep {
   /// Defaults to true; turn it off, for example, on a step that moves on
   /// with [advanceOnTargetTap].
   final bool? showControls;
+
+  /// Called when the tour moves forward from this step, before the next
+  /// step shows. Use it to open the screen the next step points at:
+  ///
+  /// ```dart
+  /// onNext: (tour) => Navigator.of(context).push(walletRoute),
+  /// ```
+  ///
+  /// The tour doesn't wait for what this returns (a pushed route's future
+  /// only completes when it's popped). It waits for the next step's target
+  /// to appear on the top screen instead, see [PinpointTour.targetTimeout].
+  final void Function(PinpointTour tour)? onNext;
+
+  /// Called when the tour moves back from this step, before the previous
+  /// step shows. Use it to undo what the previous step's [onNext] did, for
+  /// example to pop the screen it pushed.
+  final void Function(PinpointTour tour)? onPrevious;
 }
 
 /// Walks the user through a series of [PinpointStep]s, one bubble at a
@@ -101,6 +124,7 @@ class PinpointTour extends ChangeNotifier {
     this.controls,
     this.dismissible = false,
     this.scrollDuration = const Duration(milliseconds: 300),
+    this.targetTimeout = const Duration(seconds: 1),
     this.onFinish,
     this.onSkip,
     this.onTargetNotFound,
@@ -140,6 +164,11 @@ class PinpointTour extends ChangeNotifier {
   /// How long scrolling a target into view takes.
   final Duration scrollDuration;
 
+  /// How long to wait for a step's target to appear on the top screen, for
+  /// example while the screen a step's [PinpointStep.onNext] opened is
+  /// being built, before skipping the step.
+  final Duration targetTimeout;
+
   /// Called when the user moves past the last step.
   final VoidCallback? onFinish;
 
@@ -150,6 +179,17 @@ class PinpointTour extends ChangeNotifier {
   /// mounted.
   final ValueChanged<int>? onTargetNotFound;
 
+  static final ValueNotifier<PinpointTour?> _running = ValueNotifier(null);
+
+  /// The tour that's running, or null. Use it outside widgets, for example to
+  /// serve demo data from a repository while a tour runs; in widgets,
+  /// [PinpointDemo] does it for you.
+  static ValueListenable<PinpointTour?> get active => _running;
+
+  bool _isRunning = false;
+  // The wait for a step's target to appear, if one is under way.
+  Timer? _waitTimer;
+  Completer<PinpointTargetHandle?>? _wait;
   int? _index;
   PinpointTargetHandle? _active;
   // Bumped on every move, so a move that finishes scrolling after a newer
@@ -157,14 +197,17 @@ class PinpointTour extends ChangeNotifier {
   int _generation = 0;
   bool _disposed = false;
 
-  /// The index of the current step, or null when the tour isn't running.
+  /// The index of the current step, or null when the tour isn't running or
+  /// hasn't shown its first step yet.
   int? get currentIndex => _index;
 
-  /// The current step, or null when the tour isn't running.
+  /// The current step, or null when the tour isn't running or hasn't shown
+  /// its first step yet.
   PinpointStep? get currentStep => _index == null ? null : steps[_index!];
 
-  /// Whether the tour is running.
-  bool get isActive => _index != null;
+  /// Whether the tour is running: from [start] until it finishes, is
+  /// skipped or stops, including between steps.
+  bool get isActive => _isRunning;
 
   /// Whether the current step is the first one.
   bool get isFirst => _index == 0;
@@ -176,17 +219,27 @@ class PinpointTour extends ChangeNotifier {
   int get length => steps.length;
 
   /// Starts the tour at step [index], or the first step with a mounted
-  /// target after it.
-  Future<void> start([int index = 0]) => _moveTo(index, 1);
+  /// target after it. Starting a running tour restarts it.
+  Future<void> start([int index = 0]) {
+    if (!_isRunning) {
+      _isRunning = true;
+      _running.value = this;
+      notifyListeners();
+    }
+    return _moveTo(index, 1, from: null);
+  }
 
   /// Moves to the next step, or finishes the tour after the last one.
-  Future<void> next() => _moveTo((_index ?? -1) + 1, 1);
+  Future<void> next() async {
+    if (!_isRunning) return;
+    await _moveTo((_index ?? -1) + 1, 1, from: _index);
+  }
 
   /// Moves to the previous step. Does nothing on the first step.
   Future<void> previous() async {
     final index = _index;
-    if (index == null || index == 0) return;
-    await _moveTo(index - 1, -1);
+    if (!_isRunning || index == null || index == 0) return;
+    await _moveTo(index - 1, -1, from: index);
   }
 
   /// Ends the tour early and calls [onSkip].
@@ -203,38 +256,88 @@ class PinpointTour extends ChangeNotifier {
     onFinish?.call();
   }
 
-  Future<void> _moveTo(int index, int direction) async {
+  Future<void> _moveTo(int index, int direction, {required int? from}) async {
     final generation = ++_generation;
+    bool stale() => _disposed || generation != _generation;
+    _cancelWait();
 
-    // Find the next step, in [direction], whose target is mounted.
-    PinpointTargetHandle? target;
+    _hideActive();
+    if (from != null) {
+      final step = steps[from];
+      (direction > 0 ? step.onNext : step.onPrevious)?.call(this);
+    }
+
+    // Find the next step, in [direction], whose target shows up on the top
+    // screen.
     while (index >= 0 && index < steps.length) {
-      target = PinpointTargetHandle.lookup(steps[index].targetId);
-      if (target != null) break;
+      final target = await _waitForTarget(steps[index].targetId);
+      if (stale()) return;
+      if (target != null) {
+        _index = index;
+        notifyListeners();
+        await target.reveal(scrollDuration);
+        if (stale() || !target.mounted) return;
+        _active = target..showStep(this, steps[index]);
+        return;
+      }
       _reportMissing(index);
       index += direction;
     }
 
-    if (target == null) {
-      // Ran off the end: that's the natural end of the tour. Running off
-      // the start (every earlier target gone) leaves the current step up.
-      if (index >= steps.length) {
-        if (isActive) {
-          finish();
-        } else {
-          onFinish?.call();
-        }
+    if (index >= steps.length) {
+      // Ran off the end: that's the natural end of the tour.
+      finish();
+    } else if (from != null) {
+      // Ran off the start, every earlier target gone: stay where we were.
+      final target = PinpointTargetHandle.lookup(steps[from].targetId);
+      if (target != null && target.mounted) {
+        _active = target..showStep(this, steps[from]);
       }
-      return;
+    }
+  }
+
+  /// The mounted target with [id] on the top screen, waiting up to
+  /// [targetTimeout] for it to appear.
+  Future<PinpointTargetHandle?> _waitForTarget(String id) {
+    PinpointTargetHandle? find() {
+      final target = PinpointTargetHandle.lookup(id);
+      return target != null && target.isOnTopRoute ? target : null;
     }
 
-    _hideActive();
-    _index = index;
-    notifyListeners();
+    final found = find();
+    if (found != null || targetTimeout == Duration.zero) {
+      return SynchronousFuture(found);
+    }
+    final completer = _wait = Completer<PinpointTargetHandle?>();
+    final timeout = _waitTimer = Timer(targetTimeout, () {
+      if (!completer.isCompleted) completer.complete(find());
+    });
+    final binding = SchedulerBinding.instance;
+    void check(Duration _) {
+      if (completer.isCompleted) return;
+      final target = find();
+      if (target != null || _disposed) {
+        timeout.cancel();
+        completer.complete(target);
+        return;
+      }
+      binding
+        ..addPostFrameCallback(check)
+        ..scheduleFrame();
+    }
 
-    await target.reveal(scrollDuration);
-    if (_disposed || generation != _generation || !target.mounted) return;
-    _active = target..showStep(this, steps[index]);
+    binding
+      ..addPostFrameCallback(check)
+      ..scheduleFrame();
+    return completer.future;
+  }
+
+  void _cancelWait() {
+    _waitTimer?.cancel();
+    _waitTimer = null;
+    final wait = _wait;
+    _wait = null;
+    if (wait != null && !wait.isCompleted) wait.complete(null);
   }
 
   void _reportMissing(int index) {
@@ -256,9 +359,16 @@ class PinpointTour extends ChangeNotifier {
 
   void _end() {
     _generation++;
+    _cancelWait();
     _hideActive();
-    _index = null;
+    _stopRunning();
     notifyListeners();
+  }
+
+  void _stopRunning() {
+    _isRunning = false;
+    _index = null;
+    if (identical(_running.value, this)) _running.value = null;
   }
 
   /// Called by a target when its bubble was closed by the user tapping
@@ -275,9 +385,12 @@ class PinpointTour extends ChangeNotifier {
     if (!identical(target, _active)) return;
     _active = null;
     _generation++;
+    _cancelWait();
+    _isRunning = false;
     _index = null;
     // The target is being removed mid-frame; tell listeners afterwards.
     Future.microtask(() {
+      if (identical(_running.value, this)) _running.value = null;
       if (!_disposed) notifyListeners();
     });
   }
@@ -286,7 +399,9 @@ class PinpointTour extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _generation++;
+    _cancelWait();
     _hideActive();
+    if (identical(_running.value, this)) _running.value = null;
     super.dispose();
   }
 }

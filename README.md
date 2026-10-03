@@ -26,8 +26,11 @@ right-to-left layouts work out of the box.
 - **Dim** the screen, or **spotlight** the target through a hole of any
   shape: rounded, circle, stadium. Optionally **pulse** a ring around it, or
   open it like an **iris**.
-- **Guided tours** across widgets anywhere in the app, with built-in Next,
-  Previous and close buttons inside or outside the bubble.
+- **Guided tours** across widgets anywhere in the app, and across screens,
+  with built-in Next, Previous and close buttons inside or outside the
+  bubble.
+- **Demo data** during a tour, so new users with nothing yet still see what
+  each step is about. The real data comes back when the tour ends.
 - **Full control over the look**: color, corners, padding, border, shadows,
   arrow size. Per bubble, or app-wide with a theme.
 - **RTL-first**: `start` and `end` follow the reading direction.
@@ -289,6 +292,53 @@ PinpointTour(
   `onFinish` or `onSkip`.
 - `PinpointTour` is a `ChangeNotifier`. Listen to it to react to step
   changes, and dispose it when you're done.
+
+### Tours across screens
+
+A step's `onNext` runs when the tour moves forward from it, and `onPrevious`
+when it moves back. Open and close screens there:
+
+```dart
+PinpointStep(
+  targetId: 'wallet-button',
+  onNext: (tour) => Navigator.of(context).push(walletRoute),
+  content: ...,
+),
+PinpointStep(
+  targetId: 'transactions', // on the wallet screen
+  onPrevious: (tour) => Navigator.of(context).pop(),
+  content: ...,
+),
+```
+
+- The tour doesn't wait for what the hooks return: a pushed route's future
+  only completes when it's popped. Instead, it waits for the next step's
+  target to appear on the top screen, up to `targetTimeout` (one second by
+  default), then for the screen's transition to finish.
+- Targets on screens covered by another route don't count.
+- Keep the `PinpointTour` somewhere that outlives the screens it visits, and
+  bring the user back where you want in `onFinish` and `onSkip`.
+
+### Demo data during a tour
+
+Show sample content while a tour runs, and the real content otherwise:
+
+```dart
+PinpointDemo(
+  demo: (context) => TransactionList(sampleTransactions),
+  child: TransactionList(transactions),
+)
+
+// Or, when most of the widget is the same:
+PinpointDemo.builder(
+  builder: (context, touring) => BalanceCard(touring ? 1250 : balance),
+)
+```
+
+It follows any running tour, or only the one you pass as `tour`. Targets
+inside the demo content work as usual. Outside widgets, for example in a
+repository or state manager, `PinpointTour.active` tells you which tour is
+running.
 
 ### Showing a tour once
 

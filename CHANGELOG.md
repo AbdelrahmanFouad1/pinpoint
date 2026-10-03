@@ -23,6 +23,15 @@ The API is now stable.
 * `Pinpoint.cornerContent`: a widget pinned to a corner of the screen,
   inside the safe area, that moves to another corner rather than cover the
   target or the bubble.
+* Tours across screens: `PinpointStep.onNext` and `onPrevious` hooks to
+  open and close screens, and `PinpointTour.targetTimeout` to wait for the
+  next target to appear on the top screen. Steps wait for screen
+  transitions to finish, and ignore targets on covered screens.
+* `PinpointDemo` and `PinpointDemo.builder`: sample content while a tour
+  runs, real content otherwise. `PinpointTour.active` reports the running
+  tour.
+* `PinpointTour.isActive` is now true from `start()` until the tour ends,
+  including between steps and while waiting for a target.
 * `advanceOnTargetTap` on `PinpointTour` and `PinpointStep`: tapping the
   target moves to the next step.
 * Spotlight animations, off by default: `PinpointPulse`, a ring that keeps

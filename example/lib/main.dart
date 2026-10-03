@@ -86,6 +86,12 @@ class HomePage extends StatelessWidget {
             subtitle: 'Next, Previous and close buttons, inside or outside',
             onTap: () => open(const TourDemo()),
           ),
+          _DemoTile(
+            icon: Icons.swap_horiz,
+            title: 'Multi-screen tour',
+            subtitle: 'Moves between screens, with demo data during the tour',
+            onTap: () => open(const MultiScreenDemo()),
+          ),
         ],
       ),
     );
@@ -705,6 +711,239 @@ class _Conditions extends StatelessWidget {
                 title: Text(condition),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Multi-screen tour with demo data
+// ---------------------------------------------------------------------------
+
+/// A new user's wallet is empty: during the tour, show sample data instead.
+const _sampleTransactions = [
+  ('Amazon', '+ 45.00'),
+  ('Noon', '+ 12.50'),
+  ('IKEA', '+ 30.75'),
+];
+
+class MultiScreenDemo extends StatefulWidget {
+  const MultiScreenDemo({super.key});
+
+  @override
+  State<MultiScreenDemo> createState() => _MultiScreenDemoState();
+}
+
+class _MultiScreenDemoState extends State<MultiScreenDemo> {
+  late final PinpointTour _tour = PinpointTour(
+    controls: const PinpointTourControls(
+      showClose: true,
+      closePlacement: PinpointClosePlacement.screen,
+    ),
+    style: const PinpointStyle(
+      color: Colors.white,
+      foregroundColor: Colors.black87,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+    ),
+    // Wherever the tour ends, come back to this screen and its real data.
+    onFinish: _backHere,
+    onSkip: _backHere,
+    steps: [
+      PinpointStep(
+        targetId: 'balance',
+        direction: PinpointDirection.bottom,
+        content: (context, tour) => const _StepText(
+          'Your balance',
+          'Cashback from every purchase adds up here.',
+        ),
+      ),
+      PinpointStep(
+        targetId: 'wallet-button',
+        // Moving on opens the wallet, where the next step is.
+        onNext: (tour) => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const WalletScreen())),
+        content: (context, tour) => const _StepText(
+          'Your wallet',
+          'See where your cashback came from.',
+        ),
+      ),
+      PinpointStep(
+        targetId: 'transaction',
+        direction: PinpointDirection.bottom,
+        // Going back closes the wallet again.
+        onPrevious: (tour) => Navigator.of(context).pop(),
+        content: (context, tour) => const _StepText(
+          'Every purchase',
+          'Each store you shop at shows up here.',
+        ),
+      ),
+      PinpointStep(
+        targetId: 'withdraw',
+        content: (context, tour) => const _StepText(
+          'Withdraw',
+          'Move your cashback to your bank once it clears.',
+        ),
+      ),
+    ],
+  );
+
+  void _backHere() {
+    final here = ModalRoute.of(context);
+    Navigator.of(context).popUntil((route) => route == here);
+  }
+
+  @override
+  void dispose() {
+    _tour.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Multi-screen tour')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'This account is new, so its wallet is empty. The tour shows '
+            'sample data, and the real data comes back when it ends.',
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _tour.start,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Start tour'),
+          ),
+          const SizedBox(height: 32),
+          PinpointTarget(
+            id: 'balance',
+            child: Card(
+              color: _brand,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Cashback balance',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 8),
+                    // Same card, different number while the tour runs.
+                    PinpointDemo.builder(
+                      builder: (context, touring) => Text(
+                        touring ? '1,250.00' : '0.00',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 120),
+          Center(
+            child: PinpointTarget(
+              id: 'wallet-button',
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const WalletScreen()),
+                ),
+                icon: const Icon(Icons.account_balance_wallet),
+                label: const Text('Open wallet'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class WalletScreen extends StatelessWidget {
+  const WalletScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Wallet')),
+      body: Column(
+        children: [
+          Expanded(
+            // Sample transactions during the tour, the real (empty) list
+            // otherwise. The tour's target lives in the sample list.
+            child: PinpointDemo(
+              demo: (context) => ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  for (final (i, (store, amount))
+                      in _sampleTransactions.indexed)
+                    if (i == 0)
+                      PinpointTarget(
+                        id: 'transaction',
+                        child: _TransactionTile(store, amount),
+                      )
+                    else
+                      _TransactionTile(store, amount),
+                ],
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.receipt_long, size: 48, color: Colors.grey),
+                    SizedBox(height: 8),
+                    Text('No cashback yet'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: PinpointTarget(
+              id: 'withdraw',
+              child: FilledButton(
+                onPressed: () {},
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('Withdraw'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransactionTile extends StatelessWidget {
+  const _TransactionTile(this.store, this.amount);
+
+  final String store;
+  final String amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(child: Text(store[0])),
+        title: Text(store),
+        subtitle: const Text('Cashback'),
+        trailing: Text(
+          amount,
+          style: const TextStyle(
+            color: Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

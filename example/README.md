@@ -10,6 +10,8 @@ on the home page flips every demo to right-to-left.
 - **Tour**: a store page with a tour across the app bar, categories,
   conditions and a button. Choose Next and Previous buttons inside or
   outside the bubble, a close button, and tapping the target to continue.
+- **Multi-screen tour**: a tour that opens the wallet screen and comes back,
+  showing sample data to a new user while it runs.
 
 `lib/screenshots.dart` renders the scenes used for the package screenshots,
 and `test/capture_gif_test.dart` renders the README animation.
