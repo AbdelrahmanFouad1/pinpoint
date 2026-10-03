@@ -1,6 +1,6 @@
 name: pinpoint
 description: Anchored bubbles with a pointing arrow, spotlight highlighting, and guided tours for Flutter. Fully customizable and RTL-ready.
-version: 0.1.0
+version: 1.0.0
 repository: https://github.com/AbdelrahmanFouad1/pinpoint
 issue_tracker: https://github.com/AbdelrahmanFouad1/pinpoint/issues
 
@@ -12,6 +12,8 @@ topics:
   - overlay
 
 screenshots:
+  - description: A guided tour with circle, rounded and stadium spotlights.
+    path: screenshots/tour.gif
   - description: A bubble anchored to a button, lined up with its end.
     path: screenshots/anchor.png
   - description: A spotlight on a card, with the bubble above the hole.

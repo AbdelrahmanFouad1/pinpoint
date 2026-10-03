@@ -1,3 +1,24 @@
+## 1.0.0
+
+The API is now stable.
+
+**Breaking changes**, see "Migrating from 0.1.0" in the README:
+
+* `dismissOnTapOutside` is renamed `dismissible`, on `Pinpoint` and
+  `PinpointTour`. It covers taps outside, the Escape key, and the barrier's
+  dismiss action.
+* `PinpointHighlight.spotlight` takes a `ShapeBorder` `shape` instead of
+  `borderRadius`, so the hole can be a circle, a stadium, or any shape.
+* `computePinpointGeometry` and `PinpointGeometry` are no longer exported.
+
+**New:**
+
+* `advanceOnTargetTap` on `PinpointTour` and `PinpointStep`: tapping the
+  target moves to the next step.
+* Bubbles with a dim or spotlight barrier stay above bubbles shown after
+  them.
+* An animated tour in the README, and a recipe for showing a tour once.
+
 ## 0.1.0
 
 Initial release.

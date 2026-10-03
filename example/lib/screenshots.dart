@@ -2,6 +2,8 @@
 //
 // flutter build web -t lib/screenshots.dart -o build/shots
 // then open index.html?scene=<name> for each scene below.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pinpoint/pinpoint.dart';
 
@@ -26,6 +28,7 @@ void main() {
       home: switch (scene) {
         'spotlight' => const _SpotlightScene(),
         'tour' => const _TourScene(),
+        'autoplay' => const AutoplayScene(),
         'directions' => const _DirectionsScene(),
         'rtl' => const Directionality(
           textDirection: TextDirection.rtl,
@@ -263,6 +266,144 @@ class _TourSceneState extends State<_TourScene> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A tour that plays by itself, for the README animation.
+class AutoplayScene extends StatefulWidget {
+  const AutoplayScene({super.key});
+
+  @override
+  State<AutoplayScene> createState() => AutoplaySceneState();
+}
+
+class AutoplaySceneState extends State<AutoplayScene> {
+  Timer? _timer;
+
+  late final _tour = PinpointTour(
+    style: const PinpointStyle(
+      color: Colors.white,
+      foregroundColor: Colors.black87,
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      arrow: PinpointArrow(width: 22, height: 11),
+    ),
+    steps: [
+      PinpointStep(
+        targetId: 'alerts',
+        direction: PinpointDirection.bottom,
+        alignment: PinpointAlignment.end,
+        highlight: const PinpointHighlight.spotlight(
+          padding: EdgeInsets.all(4),
+          shape: CircleBorder(),
+        ),
+        content: (context, tour) =>
+            const _Caption(step: '1 / 3', text: 'Cashback alerts land here.'),
+      ),
+      PinpointStep(
+        targetId: 'store',
+        highlight: const PinpointHighlight.spotlight(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+        ),
+        content: (context, tour) =>
+            const _Caption(step: '2 / 3', text: 'Pick a store to earn 9%.'),
+      ),
+      PinpointStep(
+        targetId: 'wallet',
+        highlight: const PinpointHighlight.spotlight(
+          padding: EdgeInsets.all(4),
+          shape: StadiumBorder(),
+        ),
+        content: (context, tour) =>
+            const _Caption(step: '3 / 3', text: 'Your cashback adds up here.'),
+      ),
+    ],
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tour.start();
+      _timer = Timer.periodic(const Duration(milliseconds: 1600), (_) {
+        _tour.isLast ? _tour.start() : _tour.next();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _tour.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sahseh'),
+        actions: const [
+          PinpointTarget(
+            id: 'alerts',
+            child: Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.notifications_outlined),
+            ),
+          ),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          _StoreTile(name: 'Noon', rate: '5%'),
+          SizedBox(height: 12),
+          PinpointTarget(
+            id: 'store',
+            child: _StoreTile(name: 'Amazon', rate: '9%', highlight: true),
+          ),
+          SizedBox(height: 12),
+          _StoreTile(name: 'IKEA', rate: '4%'),
+          SizedBox(height: 12),
+          _StoreTile(name: 'Jarir', rate: '3%'),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          PinpointTarget(
+            id: 'wallet',
+            child: NavigationDestination(
+              icon: Icon(Icons.account_balance_wallet),
+              label: 'Wallet',
+            ),
+          ),
+          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+}
+
+class _Caption extends StatelessWidget {
+  const _Caption({required this.step, required this.text});
+
+  final String step;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(text, style: const TextStyle(fontSize: 16)),
+        const SizedBox(height: 4),
+        Text(step, style: const TextStyle(color: Colors.black45)),
+      ],
     );
   }
 }

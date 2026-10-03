@@ -4,6 +4,10 @@ Bubbles with an arrow that point at any widget, with optional dimming and
 spotlight, and guided tours built from them. Every part is customizable, and
 right-to-left layouts work out of the box.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/AbdelrahmanFouad1/pinpoint/main/screenshots/tour.gif" width="300" alt="A guided tour moving from step to step, with circle, rounded and stadium spotlights">
+</p>
+
 <p>
   <img src="https://raw.githubusercontent.com/AbdelrahmanFouad1/pinpoint/main/screenshots/anchor.png" width="200" alt="A bubble anchored to a button">
   <img src="https://raw.githubusercontent.com/AbdelrahmanFouad1/pinpoint/main/screenshots/spotlight.png" width="200" alt="A spotlight on a card">
@@ -19,7 +23,8 @@ right-to-left layouts work out of the box.
 - **Auto flip** to the opposite side when there's no room.
 - **Follows the target while scrolling**, and hides while it's scrolled
   out of view.
-- **Dim** the screen, or **spotlight** the target through a rounded hole.
+- **Dim** the screen, or **spotlight** the target through a hole of any
+  shape: rounded, circle, stadium.
 - **Guided tours** across widgets anywhere in the app.
 - **Full control over the look**: color, corners, padding, border, shadows,
   arrow size. Per bubble, or app-wide with a theme.
@@ -88,7 +93,9 @@ Pinpoint(
   controller: controller,
   highlight: const PinpointHighlight.spotlight(
     padding: EdgeInsets.all(12),
-    borderRadius: BorderRadius.all(Radius.circular(24)),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(24)),
+    ),
   ),
   content: (context, controller) => const Text('Choose a store'),
   child: const StoreCard(),
@@ -101,15 +108,19 @@ Pinpoint(
 | `PinpointHighlight.dim()` | The whole screen dimmed, target included | Blocked |
 | `PinpointHighlight.spotlight()` | Dimmed, with a hole around the target | Only the target is tappable |
 
-With a spotlight, the bubble is placed next to the hole rather than the
-target, so it never covers it.
+The hole can be any `ShapeBorder`: `CircleBorder()` suits icons and
+`StadiumBorder()` suits pill buttons. With a spotlight, the bubble is placed
+next to the hole rather than the target, so it never covers it.
+
+When several bubbles show at once, the ones with a dim or spotlight barrier
+stay on top, so nothing appears over a dimmed screen.
 
 ### Dismissing
 
-By default, tapping anywhere outside the bubble and its target hides it.
-Scrolling doesn't. With `dismissible: true`, the Escape key and the
-screen reader's dismiss action hide it too. Set it to `false` to close the
-bubble only from its own content.
+With `dismissible: true`, the default, the user can close the bubble by
+tapping anywhere outside it and its target, by pressing Escape, or with the
+screen reader's dismiss action on the barrier. Scrolling never closes it.
+Set it to `false` to close the bubble only from its own content.
 
 ### Style
 
@@ -193,6 +204,9 @@ tour.start();
   `currentIndex`, `length`, `isFirst` and `isLast`.
 - Steps take the tour's `direction`, `alignment`, `style`, `highlight` and
   `gap` unless they set their own. Tours spotlight their targets by default.
+- Set `advanceOnTargetTap: true` on the tour or a step to move on when the
+  user taps the target itself. The target still gets the tap, so a button
+  runs its own action too.
 - Tapping outside a tour step does nothing, unless the tour sets
   `dismissible: true`, which makes it skip the tour.
 - Targets inside a scrollable are scrolled into view first.
@@ -202,6 +216,24 @@ tour.start();
   `onFinish` or `onSkip`.
 - `PinpointTour` is a `ChangeNotifier`. Listen to it to react to step
   changes, and dispose it when you're done.
+
+### Showing a tour once
+
+Pinpoint doesn't store anything, so you decide where "seen" lives. With
+[shared_preferences](https://pub.dev/packages/shared_preferences), for
+example:
+
+```dart
+final prefs = await SharedPreferences.getInstance();
+if (!(prefs.getBool('home_tour_seen') ?? false)) {
+  final tour = PinpointTour(
+    steps: steps,
+    onFinish: () => prefs.setBool('home_tour_seen', true),
+    onSkip: () => prefs.setBool('home_tour_seen', true),
+  );
+  tour.start();
+}
+```
 
 ## The bubble shape on its own
 
@@ -229,6 +261,23 @@ Container(
   scrollable, not outer ones.
 - **Screen readers behind a barrier**: dim and spotlight block taps, but
   screen readers can still reach the widgets behind them.
+
+## Migrating from 0.1.0
+
+- `dismissOnTapOutside` is now `dismissible`, on both `Pinpoint` and
+  `PinpointTour`.
+- `PinpointHighlight.spotlight` takes a `shape` instead of `borderRadius`:
+
+  ```dart
+  // Before
+  PinpointHighlight.spotlight(borderRadius: BorderRadius.circular(24))
+  // After
+  PinpointHighlight.spotlight(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  )
+  ```
+
+- `computePinpointGeometry` and `PinpointGeometry` are no longer exported.
 
 ## License
 
