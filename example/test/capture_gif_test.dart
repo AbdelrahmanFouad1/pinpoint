@@ -64,8 +64,8 @@ void main() {
       for (final file in out.listSync()) {
         file.deleteSync();
       }
-      // Three steps of 1.6s each, plus the first fade-in.
-      for (var frame = 0; frame < 52; frame++) {
+      // Three steps of 2s each, plus the first fade-in.
+      for (var frame = 0; frame < 62; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
         final render =
             boundary.currentContext!.findRenderObject()!

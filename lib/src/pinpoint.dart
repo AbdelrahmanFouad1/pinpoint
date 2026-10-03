@@ -345,12 +345,10 @@ class _PinpointState extends State<Pinpoint>
           onDismiss: widget.dismissible ? widget.controller.hide : null,
           child: PinpointBarrier(
             color: highlight.color,
-            hole: highlight.spotlight
-                ? highlight.shape!.getOuterPath(
-                    anchor,
-                    textDirection: textDirection,
-                  )
-                : null,
+            holeRect: highlight.spotlight ? anchor : null,
+            holeShape: highlight.shape,
+            pulse: highlight.pulse,
+            iris: highlight.iris,
             animation: _animation,
           ),
         ),

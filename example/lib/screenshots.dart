@@ -296,6 +296,7 @@ class AutoplaySceneState extends State<AutoplayScene> {
         highlight: const PinpointHighlight.spotlight(
           padding: EdgeInsets.all(4),
           shape: CircleBorder(),
+          pulse: PinpointPulse(),
         ),
         content: (context, tour) =>
             const _Caption(step: '1 / 3', text: 'Cashback alerts land here.'),
@@ -306,6 +307,7 @@ class AutoplaySceneState extends State<AutoplayScene> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(20)),
           ),
+          iris: PinpointIris(),
         ),
         content: (context, tour) =>
             const _Caption(step: '2 / 3', text: 'Pick a store to earn 9%.'),
@@ -327,7 +329,7 @@ class AutoplaySceneState extends State<AutoplayScene> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tour.start();
-      _timer = Timer.periodic(const Duration(milliseconds: 1600), (_) {
+      _timer = Timer.periodic(const Duration(milliseconds: 2000), (_) {
         _tour.isLast ? _tour.start() : _tour.next();
       });
     });

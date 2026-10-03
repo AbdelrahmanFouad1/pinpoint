@@ -12,7 +12,7 @@ topics:
   - overlay
 
 screenshots:
-  - description: A guided tour with circle, rounded and stadium spotlights.
+  - description: A guided tour with pulse and iris spotlight animations.
     path: screenshots/tour.gif
   - description: A bubble anchored to a button, lined up with its end.
     path: screenshots/anchor.png

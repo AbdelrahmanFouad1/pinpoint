@@ -15,6 +15,9 @@ The API is now stable.
 
 * `advanceOnTargetTap` on `PinpointTour` and `PinpointStep`: tapping the
   target moves to the next step.
+* Spotlight animations, off by default: `PinpointPulse`, a ring that keeps
+  pulsing around the hole, and `PinpointIris`, the hole closing in on the
+  target when it appears. Both respect reduced motion.
 * Bubbles with a dim or spotlight barrier stay above bubbles shown after
   them.
 * An animated tour in the README, and a recipe for showing a tour once.

@@ -5,7 +5,7 @@ spotlight, and guided tours built from them. Every part is customizable, and
 right-to-left layouts work out of the box.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/AbdelrahmanFouad1/pinpoint/main/screenshots/tour.gif" width="300" alt="A guided tour moving from step to step, with circle, rounded and stadium spotlights">
+  <img src="https://raw.githubusercontent.com/AbdelrahmanFouad1/pinpoint/main/screenshots/tour.gif" width="300" alt="A guided tour moving from step to step: a pulsing circle spotlight, an iris closing on a card, and a stadium spotlight">
 </p>
 
 <p>
@@ -24,7 +24,8 @@ right-to-left layouts work out of the box.
 - **Follows the target while scrolling**, and hides while it's scrolled
   out of view.
 - **Dim** the screen, or **spotlight** the target through a hole of any
-  shape: rounded, circle, stadium.
+  shape: rounded, circle, stadium. Optionally **pulse** a ring around it, or
+  open it like an **iris**.
 - **Guided tours** across widgets anywhere in the app.
 - **Full control over the look**: color, corners, padding, border, shadows,
   arrow size. Per bubble, or app-wide with a theme.
@@ -111,6 +112,23 @@ Pinpoint(
 The hole can be any `ShapeBorder`: `CircleBorder()` suits icons and
 `StadiumBorder()` suits pill buttons. With a spotlight, the bubble is placed
 next to the hole rather than the target, so it never covers it.
+
+#### Spotlight animations
+
+Both are off by default:
+
+```dart
+PinpointHighlight.spotlight(
+  // A ring that keeps growing out of the hole and fading.
+  pulse: const PinpointPulse(),
+  // The hole starts wide and closes in on the target when it appears.
+  iris: const PinpointIris(),
+)
+```
+
+Tune them with `PinpointPulse(color:, width:, spread:, period:)` and
+`PinpointIris(duration:, curve:)`. Neither plays when the platform asks for
+reduced motion.
 
 When several bubbles show at once, the ones with a dim or spotlight barrier
 stay on top, so nothing appears over a dimmed screen.
