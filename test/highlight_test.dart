@@ -18,7 +18,7 @@ void main() {
   Future<void> pumpApp(
     WidgetTester tester,
     PinpointHighlight highlight, {
-    bool dismissOnTapOutside = true,
+    bool dismissible = true,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -35,7 +35,7 @@ void main() {
                 child: Pinpoint(
                   controller: controller,
                   highlight: highlight,
-                  dismissOnTapOutside: dismissOnTapOutside,
+                  dismissible: dismissible,
                   content: (context, controller) => const Text('Bubble'),
                   child: GestureDetector(
                     onTap: () => targetTaps++,
@@ -80,11 +80,7 @@ void main() {
 
   group('dim', () {
     testWidgets('covers the target too and blocks taps', (tester) async {
-      await pumpApp(
-        tester,
-        const PinpointHighlight.dim(),
-        dismissOnTapOutside: false,
-      );
+      await pumpApp(tester, const PinpointHighlight.dim(), dismissible: false);
       expect(find.byType(PinpointBarrier), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('target')), warnIfMissed: false);
@@ -121,7 +117,7 @@ void main() {
       await pumpApp(
         tester,
         const PinpointHighlight.spotlight(padding: EdgeInsets.all(8)),
-        dismissOnTapOutside: false,
+        dismissible: false,
       );
       final rect = targetRect(tester);
       // Inside the hole but outside the target: reaches the background.
@@ -138,6 +134,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(controller.isShowing, isFalse);
       expect(behindTaps, 0);
+    });
+
+    testWidgets('the hole takes any shape', (tester) async {
+      await pumpApp(
+        tester,
+        const PinpointHighlight.spotlight(
+          padding: EdgeInsets.all(30),
+          shape: CircleBorder(),
+        ),
+        dismissible: false,
+      );
+      final center = targetRect(tester).center;
+      // The hole is a circle of radius 50 (the 160x100 padded rect's
+      // shortest side): its center lets taps through, its corners don't.
+      await tester.tapAt(center + const Offset(0, 45));
+      expect(behindTaps, 1);
+      await tester.tapAt(center + const Offset(45, 45));
+      expect(behindTaps, 1);
     });
 
     testWidgets('the bubble sits outside the hole', (tester) async {

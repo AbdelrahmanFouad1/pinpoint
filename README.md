@@ -107,7 +107,7 @@ target, so it never covers it.
 ### Dismissing
 
 By default, tapping anywhere outside the bubble and its target hides it.
-Scrolling doesn't. With `dismissOnTapOutside: true`, the Escape key and the
+Scrolling doesn't. With `dismissible: true`, the Escape key and the
 screen reader's dismiss action hide it too. Set it to `false` to close the
 bubble only from its own content.
 
@@ -194,7 +194,7 @@ tour.start();
 - Steps take the tour's `direction`, `alignment`, `style`, `highlight` and
   `gap` unless they set their own. Tours spotlight their targets by default.
 - Tapping outside a tour step does nothing, unless the tour sets
-  `dismissOnTapOutside: true`, which makes it skip the tour.
+  `dismissible: true`, which makes it skip the tour.
 - Targets inside a scrollable are scrolled into view first.
 - Steps whose target isn't mounted are skipped, and `onTargetNotFound` is
   called with their index.

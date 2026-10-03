@@ -7,7 +7,6 @@ export 'src/bubble_border.dart';
 export 'src/controller.dart';
 export 'src/direction.dart';
 export 'src/highlight.dart';
-export 'src/geometry.dart';
 export 'src/pinpoint.dart';
 export 'src/style.dart';
 export 'src/target.dart' show PinpointTarget;

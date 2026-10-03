@@ -14,7 +14,7 @@ void main() {
     PinpointTheme? theme,
     PinpointStyle? style,
     PinpointHighlight highlight = const PinpointHighlight.none(),
-    bool dismissOnTapOutside = true,
+    bool dismissible = true,
     bool disableAnimations = false,
   }) => MaterialApp(
     theme: ThemeData(extensions: [?theme]),
@@ -26,7 +26,7 @@ void main() {
             controller: controller,
             style: style,
             highlight: highlight,
-            dismissOnTapOutside: dismissOnTapOutside,
+            dismissible: dismissible,
             content: (context, controller) => const Text('Bubble'),
             child: const SizedBox(width: 100, height: 40),
           ),
@@ -128,10 +128,7 @@ void main() {
     testWidgets('no dismiss action when not dismissible', (tester) async {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
-        app(
-          highlight: const PinpointHighlight.dim(),
-          dismissOnTapOutside: false,
-        ),
+        app(highlight: const PinpointHighlight.dim(), dismissible: false),
       );
       controller.show();
       await tester.pumpAndSettle();
@@ -149,7 +146,7 @@ void main() {
     });
 
     testWidgets('Escape does nothing when not dismissible', (tester) async {
-      await tester.pumpWidget(app(dismissOnTapOutside: false));
+      await tester.pumpWidget(app(dismissible: false));
       controller.show();
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);

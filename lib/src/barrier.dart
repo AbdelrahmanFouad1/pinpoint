@@ -19,7 +19,7 @@ class PinpointBarrier extends LeafRenderObjectWidget {
 
   /// The area left uncovered, in the overlay's coordinates, or null to cover
   /// everything.
-  final RRect? hole;
+  final Path? hole;
 
   /// Fades the barrier in and out.
   final Animation<double> animation;
@@ -45,7 +45,7 @@ class RenderPinpointBarrier extends RenderBox {
   /// Creates the render object.
   RenderPinpointBarrier({
     required Color color,
-    required RRect? hole,
+    required Path? hole,
     required Animation<double> animation,
   }) : _color = color,
        _hole = hole,
@@ -58,9 +58,9 @@ class RenderPinpointBarrier extends RenderBox {
     markNeedsPaint();
   }
 
-  RRect? _hole;
-  set hole(RRect? value) {
-    if (_hole == value) return;
+  Path? _hole;
+  set hole(Path? value) {
+    if (identical(_hole, value)) return;
     _hole = value;
     markNeedsPaint();
   }
@@ -110,7 +110,7 @@ class RenderPinpointBarrier extends RenderBox {
         Path()
           ..fillType = PathFillType.evenOdd
           ..addRect(bounds)
-          ..addRRect(hole.shift(offset)),
+          ..addPath(hole, offset),
         paint,
       );
     }

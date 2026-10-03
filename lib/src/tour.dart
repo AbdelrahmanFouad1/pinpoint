@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'direction.dart';
 import 'highlight.dart';
+import 'pinpoint.dart' show Pinpoint;
 import 'style.dart';
 import 'target.dart';
 
@@ -84,7 +85,7 @@ class PinpointTour extends ChangeNotifier {
     this.style,
     this.highlight = const PinpointHighlight.spotlight(),
     this.gap = 4,
-    this.dismissOnTapOutside = false,
+    this.dismissible = false,
     this.scrollDuration = const Duration(milliseconds: 300),
     this.onFinish,
     this.onSkip,
@@ -109,8 +110,10 @@ class PinpointTour extends ChangeNotifier {
   /// The default distance between the arrow's tip and the target.
   final double gap;
 
-  /// Whether tapping outside the bubble and the target skips the tour.
-  final bool dismissOnTapOutside;
+  /// Whether the user can skip the tour from outside the bubble: by tapping
+  /// outside it and its target, by pressing Escape, or with the screen
+  /// reader's dismiss action. See [Pinpoint.dismissible].
+  final bool dismissible;
 
   /// How long scrolling a target into view takes.
   final Duration scrollDuration;

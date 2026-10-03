@@ -192,7 +192,7 @@ class _PinpointTargetState extends State<PinpointTarget>
       style: step.style?.merge(tour.style) ?? tour.style,
       highlight: step.highlight ?? tour.highlight,
       gap: step.gap ?? tour.gap,
-      dismissOnTapOutside: tour.dismissOnTapOutside,
+      dismissible: tour.dismissible,
       content: (context, _) => step.content(context, tour),
       child: widget.child,
     );

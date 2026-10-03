@@ -19,17 +19,15 @@ void main() {
     ),
   );
 
-  PinpointTour makeTour(
-    List<PinpointStep> steps, {
-    bool dismissOnTapOutside = false,
-  }) => PinpointTour(
-    steps: steps,
-    highlight: const PinpointHighlight.none(),
-    dismissOnTapOutside: dismissOnTapOutside,
-    onFinish: () => events.add('finish'),
-    onSkip: () => events.add('skip'),
-    onTargetNotFound: (i) => events.add('missing $i'),
-  );
+  PinpointTour makeTour(List<PinpointStep> steps, {bool dismissible = false}) =>
+      PinpointTour(
+        steps: steps,
+        highlight: const PinpointHighlight.none(),
+        dismissible: dismissible,
+        onFinish: () => events.add('finish'),
+        onSkip: () => events.add('skip'),
+        onTargetNotFound: (i) => events.add('missing $i'),
+      );
 
   Widget target(String id, {Key? key}) => PinpointTarget(
     key: key,
@@ -160,10 +158,8 @@ void main() {
     );
   });
 
-  testWidgets('tapping outside skips when dismissOnTapOutside is set', (
-    tester,
-  ) async {
-    final tour = makeTour([step('a'), step('b')], dismissOnTapOutside: true);
+  testWidgets('tapping outside skips when dismissible is set', (tester) async {
+    final tour = makeTour([step('a'), step('b')], dismissible: true);
     addTearDown(tour.dispose);
     await tester.pumpWidget(app(['a', 'b']));
     tour.start();

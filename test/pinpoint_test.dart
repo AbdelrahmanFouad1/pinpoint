@@ -11,13 +11,13 @@ void main() {
   Widget app({
     PinpointDirection direction = PinpointDirection.top,
     TextDirection textDirection = TextDirection.ltr,
-    bool dismissOnTapOutside = true,
+    bool dismissible = true,
     Widget Function(Widget pinpoint)? wrap,
   }) {
     final pinpoint = Pinpoint(
       controller: controller,
       direction: direction,
-      dismissOnTapOutside: dismissOnTapOutside,
+      dismissible: dismissible,
       content: (context, controller) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -121,8 +121,8 @@ void main() {
     expect(controller.isShowing, isFalse);
   });
 
-  testWidgets('dismissOnTapOutside: false keeps it open', (tester) async {
-    await tester.pumpWidget(app(dismissOnTapOutside: false));
+  testWidgets('dismissible: false keeps it open', (tester) async {
+    await tester.pumpWidget(app(dismissible: false));
     controller.show();
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(5, 5));
@@ -136,7 +136,7 @@ void main() {
     var tapped = false;
     await tester.pumpWidget(
       app(
-        dismissOnTapOutside: false,
+        dismissible: false,
         wrap: (pinpoint) => Stack(
           children: [
             Positioned.fill(child: GestureDetector(onTap: () => tapped = true)),
@@ -194,7 +194,7 @@ void main() {
     await tester.pumpWidget(
       app(
         direction: PinpointDirection.bottom,
-        dismissOnTapOutside: false,
+        dismissible: false,
         wrap: (pinpoint) => Column(
           children: [
             const SizedBox(height: 100, child: Placeholder()),

@@ -14,38 +14,39 @@ class PinpointHighlight {
   /// No barrier: the bubble floats over the screen.
   const PinpointHighlight.none()
     : color = const Color(0x00000000),
-      spotlight = false,
       padding = EdgeInsets.zero,
-      borderRadius = BorderRadius.zero;
+      shape = null;
 
   /// Covers the whole screen with [color].
   const PinpointHighlight.dim({this.color = const Color(0x8A000000)})
-    : spotlight = false,
-      padding = EdgeInsets.zero,
-      borderRadius = BorderRadius.zero;
+    : padding = EdgeInsets.zero,
+      shape = null;
 
   /// Covers the screen with [color], except for a hole around the target.
   ///
-  /// The hole is the target's bounds grown by [padding], with corners
-  /// rounded by [borderRadius]. The bubble is placed next to the hole
-  /// rather than the target, so it never covers it.
+  /// The hole is [shape], drawn in the target's bounds grown by [padding].
+  /// For example, a [CircleBorder] or [StadiumBorder] suits icons and pill
+  /// buttons. The bubble is placed next to the hole rather than the target,
+  /// so it never covers it.
   const PinpointHighlight.spotlight({
     this.color = const Color(0x8A000000),
     this.padding = const EdgeInsets.all(8),
-    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-  }) : spotlight = true;
+    ShapeBorder this.shape = const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
+  });
 
   /// The color of the barrier.
   final Color color;
 
-  /// Whether the target shows through a hole in the barrier.
-  final bool spotlight;
-
   /// How much bigger than the target the spotlight hole is.
   final EdgeInsetsGeometry padding;
 
-  /// The corner radii of the spotlight hole.
-  final BorderRadiusGeometry borderRadius;
+  /// The shape of the spotlight hole, or null when there's no spotlight.
+  final ShapeBorder? shape;
+
+  /// Whether the target shows through a hole in the barrier.
+  bool get spotlight => shape != null;
 
   /// Whether there's a barrier at all. When false, taps outside the bubble
   /// reach the widgets behind it.
@@ -55,16 +56,15 @@ class PinpointHighlight {
   bool operator ==(Object other) =>
       other is PinpointHighlight &&
       other.color == color &&
-      other.spotlight == spotlight &&
       other.padding == padding &&
-      other.borderRadius == borderRadius;
+      other.shape == shape;
 
   @override
-  int get hashCode => Object.hash(color, spotlight, padding, borderRadius);
+  int get hashCode => Object.hash(color, padding, shape);
 
   @override
   String toString() => spotlight
-      ? 'PinpointHighlight.spotlight($color, $padding, $borderRadius)'
+      ? 'PinpointHighlight.spotlight($color, $padding, $shape)'
       : hasBarrier
       ? 'PinpointHighlight.dim($color)'
       : 'PinpointHighlight.none()';

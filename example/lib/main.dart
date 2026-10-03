@@ -66,7 +66,9 @@ class _ExamplePageState extends State<ExamplePage> {
         targetId: 'store',
         highlight: const PinpointHighlight.spotlight(
           padding: EdgeInsets.all(12),
-          borderRadius: BorderRadius.all(Radius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(24)),
+          ),
         ),
         content: (context, tour) =>
             TourCard(tour: tour, text: 'Choose a store to shop from.'),
@@ -143,7 +145,9 @@ class _ExamplePageState extends State<ExamplePage> {
               direction: PinpointDirection.top,
               highlight: const PinpointHighlight.spotlight(
                 padding: EdgeInsets.all(12),
-                borderRadius: BorderRadius.all(Radius.circular(24)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(24)),
+                ),
               ),
               style: const PinpointStyle(
                 color: Colors.white,
@@ -201,7 +205,7 @@ class _CashbackHeader extends StatelessWidget {
         controller: controller,
         direction: PinpointDirection.bottom,
         alignment: PinpointAlignment.end,
-        dismissOnTapOutside: false,
+        dismissible: false,
         style: const PinpointStyle(
           color: Color(0xFFE0A03C),
           foregroundColor: Colors.white,
@@ -332,7 +336,7 @@ class _Playground extends StatelessWidget {
               _ => const PinpointHighlight.none(),
             },
             // With a barrier, tapping it is the way out.
-            dismissOnTapOutside: highlight != 'none',
+            dismissible: highlight != 'none',
             content: (context, controller) =>
                 Text('${direction.name} / ${alignment.name}'),
             child: PinpointTarget(

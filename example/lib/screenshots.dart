@@ -144,7 +144,9 @@ class _SpotlightScene extends StatelessWidget {
             controller: PinpointController(isShowing: true),
             highlight: const PinpointHighlight.spotlight(
               padding: EdgeInsets.all(8),
-              borderRadius: BorderRadius.all(Radius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
             ),
             style: const PinpointStyle(
               color: Colors.white,

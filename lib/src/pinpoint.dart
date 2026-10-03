@@ -56,7 +56,7 @@ class Pinpoint extends StatefulWidget {
     this.gap = 4,
     this.screenMargin = const EdgeInsets.all(12),
     this.autoFlip = true,
-    this.dismissOnTapOutside = true,
+    this.dismissible = true,
     this.animationDuration = const Duration(milliseconds: 180),
   });
 
@@ -92,13 +92,15 @@ class Pinpoint extends StatefulWidget {
   /// doesn't fit on the [direction] side.
   final bool autoFlip;
 
-  /// Whether tapping anywhere outside the bubble and [child] hides it,
-  /// including on the [highlight] barrier. Dragging, for example to scroll
-  /// the page, does not.
+  /// Whether the user can close the bubble from outside it: by tapping
+  /// anywhere outside the bubble and [child], including on the [highlight]
+  /// barrier, by pressing Escape, or with the screen reader's dismiss action
+  /// on the barrier. Dragging, for example to scroll the page, never closes
+  /// it.
   ///
-  /// When true, the Escape key and the screen reader's dismiss action on
-  /// the barrier hide the bubble too.
-  final bool dismissOnTapOutside;
+  /// When false, the bubble only closes through its [controller], for
+  /// example from a button in its content.
+  final bool dismissible;
 
   /// How long the bubble takes to appear and disappear. Ignored when the
   /// platform asks for reduced motion, see [MediaQueryData.disableAnimations].
@@ -174,7 +176,7 @@ class _PinpointState extends State<Pinpoint>
   }
 
   bool _handleKey(KeyEvent event) {
-    if (!widget.dismissOnTapOutside ||
+    if (!widget.dismissible ||
         event is! KeyDownEvent ||
         event.logicalKey != LogicalKeyboardKey.escape) {
       return false;
@@ -253,10 +255,10 @@ class _PinpointState extends State<Pinpoint>
 
     final bubble = TapRegion(
       groupId: this,
-      onTapOutside: widget.dismissOnTapOutside
+      onTapOutside: widget.dismissible
           ? (event) => _outsideDown = event.position
           : null,
-      onTapUpOutside: widget.dismissOnTapOutside ? _handleUpOutside : null,
+      onTapUpOutside: widget.dismissible ? _handleUpOutside : null,
       child: PinpointBubbleLayout(
         target: anchor,
         visible: visible,
@@ -302,15 +304,18 @@ class _PinpointState extends State<Pinpoint>
       children: [
         Semantics(
           // Like ModalBarrier: lets screen reader users dismiss it.
-          label: widget.dismissOnTapOutside
+          label: widget.dismissible
               ? MaterialLocalizations.of(context).modalBarrierDismissLabel
               : null,
-          onTap: widget.dismissOnTapOutside ? widget.controller.hide : null,
-          onDismiss: widget.dismissOnTapOutside ? widget.controller.hide : null,
+          onTap: widget.dismissible ? widget.controller.hide : null,
+          onDismiss: widget.dismissible ? widget.controller.hide : null,
           child: PinpointBarrier(
             color: highlight.color,
             hole: highlight.spotlight
-                ? highlight.borderRadius.resolve(textDirection).toRRect(anchor)
+                ? highlight.shape!.getOuterPath(
+                    anchor,
+                    textDirection: textDirection,
+                  )
                 : null,
             animation: _animation,
           ),
