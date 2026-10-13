@@ -14,3 +14,4 @@ export 'src/target.dart' show PinpointTarget;
 export 'src/theme.dart';
 export 'src/tour.dart';
 export 'src/tour_controls.dart';
+export 'src/trigger.dart';

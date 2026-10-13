@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -11,6 +13,7 @@ import 'direction.dart';
 import 'highlight.dart';
 import 'style.dart';
 import 'theme.dart';
+import 'trigger.dart';
 
 /// Builds the content of a [Pinpoint] bubble. The [controller] can be used
 /// to close the bubble from inside it, for example from a close button.
@@ -26,6 +29,16 @@ typedef PinpointContentBuilder =
 ///   direction: PinpointDirection.bottom,
 ///   content: (context, controller) => const Text('Tap here to start'),
 ///   child: const StartButton(),
+/// )
+/// ```
+///
+/// Or let gestures on [child] show it, with no controller of your own:
+///
+/// ```dart
+/// Pinpoint(
+///   triggers: const {PinpointTrigger.hover, PinpointTrigger.longPress},
+///   content: (context, controller) => const Text('Copies the link'),
+///   child: IconButton(icon: const Icon(Icons.link), onPressed: copy),
 /// )
 /// ```
 ///
@@ -47,7 +60,7 @@ class Pinpoint extends StatefulWidget {
   /// Creates a bubble anchored to [child].
   const Pinpoint({
     super.key,
-    required this.controller,
+    this.controller,
     required this.content,
     required this.child,
     this.direction = PinpointDirection.top,
@@ -62,10 +75,25 @@ class Pinpoint extends StatefulWidget {
     this.outsideContent,
     this.outsideGap = 16,
     this.cornerContent,
-  });
+    this.triggers = const {},
+    this.hoverDelay = const Duration(milliseconds: 300),
+  }) : assert(
+         controller != null || triggers.length > 0,
+         'Pass a controller, triggers, or both, or the bubble never shows.',
+       );
 
-  /// Shows and hides the bubble.
-  final PinpointController controller;
+  /// Shows and hides the bubble. Optional when [triggers] are set; the
+  /// bubble then has a controller of its own.
+  final PinpointController? controller;
+
+  /// Gestures on [child] that show the bubble, on top of [controller]. For
+  /// example `{PinpointTrigger.hover, PinpointTrigger.longPress}` covers
+  /// both mouse and touch screens, like [Tooltip].
+  final Set<PinpointTrigger> triggers;
+
+  /// How long the pointer rests on [child] before a
+  /// [PinpointTrigger.hover] shows the bubble.
+  final Duration hoverDelay;
 
   /// Builds what goes inside the bubble.
   final PinpointContentBuilder content;
@@ -140,6 +168,11 @@ class _PinpointState extends State<Pinpoint>
   final _overlay = OverlayPortalController();
   late final AnimationController _animation;
 
+  // Used when the widget has no controller of its own, with triggers.
+  PinpointController? _ownController;
+  PinpointController get _controller =>
+      widget.controller ?? (_ownController ??= PinpointController());
+
   @override
   void initState() {
     super.initState();
@@ -147,8 +180,8 @@ class _PinpointState extends State<Pinpoint>
       vsync: this,
       duration: widget.animationDuration,
     );
-    widget.controller.addListener(_sync);
-    if (widget.controller.isShowing) {
+    _controller.addListener(_sync);
+    if (_controller.isShowing) {
       _overlay.show();
       _animation.value = 1;
       HardwareKeyboard.instance.addHandler(_handleKey);
@@ -173,28 +206,31 @@ class _PinpointState extends State<Pinpoint>
   void didUpdateWidget(Pinpoint oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.highlight.hasBarrier != widget.highlight.hasBarrier &&
-        widget.controller.isShowing) {
+        _controller.isShowing) {
       _raise();
     }
     _updateDuration();
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_sync);
-      widget.controller.addListener(_sync);
+    final oldController = oldWidget.controller ?? _ownController!;
+    if (oldController != _controller) {
+      oldController.removeListener(_sync);
+      _controller.addListener(_sync);
       _sync();
     }
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_sync);
+    _controller.removeListener(_sync);
     HardwareKeyboard.instance.removeHandler(_handleKey);
     _modal.remove(this);
+    _hoverTimer?.cancel();
+    _ownController?.dispose();
     _animation.dispose();
     super.dispose();
   }
 
   void _sync() {
-    if (widget.controller.isShowing) {
+    if (_controller.isShowing) {
       _overlay.show();
       _animation.forward();
       HardwareKeyboard.instance.addHandler(_handleKey);
@@ -203,7 +239,7 @@ class _PinpointState extends State<Pinpoint>
       HardwareKeyboard.instance.removeHandler(_handleKey);
       _modal.remove(this);
       _animation.reverse().whenCompleteOrCancel(() {
-        if (mounted && !widget.controller.isShowing) _overlay.hide();
+        if (mounted && !_controller.isShowing) _overlay.hide();
       });
     }
   }
@@ -218,7 +254,7 @@ class _PinpointState extends State<Pinpoint>
     final binding = SchedulerBinding.instance;
     if (binding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
       binding.addPostFrameCallback((_) {
-        if (mounted && widget.controller.isShowing) _raise();
+        if (mounted && _controller.isShowing) _raise();
       });
       return;
     }
@@ -239,7 +275,7 @@ class _PinpointState extends State<Pinpoint>
         event.logicalKey != LogicalKeyboardKey.escape) {
       return false;
     }
-    widget.controller.hide();
+    _controller.hide();
     return true;
   }
 
@@ -251,19 +287,77 @@ class _PinpointState extends State<Pinpoint>
     final down = _outsideDown;
     _outsideDown = null;
     if (down != null && (event.position - down).distance < kTouchSlop) {
-      widget.controller.hide();
+      _controller.hide();
+    }
+  }
+
+  // Tap trigger: where the pointer went down on the child.
+  int? _tapPointer;
+  Offset? _tapDown;
+
+  void _handleTriggerUp(PointerUpEvent event) {
+    final down = _tapDown;
+    final wasTap =
+        event.pointer == _tapPointer &&
+        down != null &&
+        (event.position - down).distance < kTouchSlop;
+    _tapPointer = _tapDown = null;
+    if (wasTap) _controller.toggle();
+  }
+
+  // Hover trigger: the bubble shows while the pointer is over the child or
+  // the bubble, with a short grace period to cross the gap between them.
+  bool _overTarget = false;
+  bool _overBubble = false;
+  Timer? _hoverTimer;
+
+  void _hover({bool? target, bool? bubble}) {
+    _overTarget = target ?? _overTarget;
+    _overBubble = bubble ?? _overBubble;
+    _hoverTimer?.cancel();
+    if (_overTarget || _overBubble) {
+      if (!_controller.isShowing) {
+        _hoverTimer = Timer(widget.hoverDelay, _controller.show);
+      }
+    } else {
+      _hoverTimer = Timer(const Duration(milliseconds: 100), _controller.hide);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final triggers = widget.triggers;
+    final hover = triggers.contains(PinpointTrigger.hover);
+    final tap = triggers.contains(PinpointTrigger.tap);
+    // The wrappers are always there, so changing triggers doesn't rebuild
+    // the child's subtree.
     return OverlayPortal.overlayChildLayoutBuilder(
       controller: _overlay,
       overlayChildBuilder: _buildBubble,
-      child: TapRegion(
-        groupId: this,
-        behavior: HitTestBehavior.translucent,
-        child: widget.child,
+      child: MouseRegion(
+        opaque: false,
+        onEnter: hover ? (_) => _hover(target: true) : null,
+        onExit: hover ? (_) => _hover(target: false) : null,
+        child: GestureDetector(
+          onLongPress: triggers.contains(PinpointTrigger.longPress)
+              ? _controller.show
+              : null,
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: tap
+                ? (event) {
+                    _tapPointer = event.pointer;
+                    _tapDown = event.position;
+                  }
+                : null,
+            onPointerUp: tap ? _handleTriggerUp : null,
+            child: TapRegion(
+              groupId: this,
+              behavior: HitTestBehavior.translucent,
+              child: widget.child,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -280,6 +374,18 @@ class _PinpointState extends State<Pinpoint>
     return MatrixUtils.transformRect(
       scrollable.getTransformTo(overlay),
       Offset.zero & scrollable.size,
+    );
+  }
+
+  /// Keeps a hover-triggered bubble open while the pointer is over it.
+  Widget _wrapHover(Widget bubble) {
+    if (!widget.triggers.contains(PinpointTrigger.hover)) return bubble;
+    return MouseRegion(
+      opaque: false,
+      hitTestBehavior: HitTestBehavior.deferToChild,
+      onEnter: (_) => _hover(bubble: true),
+      onExit: (_) => _hover(bubble: false),
+      child: bubble,
     );
   }
 
@@ -317,51 +423,52 @@ class _PinpointState extends State<Pinpoint>
           ? (event) => _outsideDown = event.position
           : null,
       onTapUpOutside: widget.dismissible ? _handleUpOutside : null,
-      child: PinpointBubbleLayout(
-        target: anchor,
-        visible: visible,
-        direction: widget.direction,
-        alignment: widget.alignment,
-        gap: widget.gap,
-        margin: widget.screenMargin,
-        autoFlip: widget.autoFlip,
-        color: color,
-        borderRadius:
-            style.borderRadius ?? const BorderRadius.all(Radius.circular(12)),
-        side: style.side ?? BorderSide.none,
-        shadows: style.shadows ?? const [],
-        arrow: style.arrow ?? const PinpointArrow(),
-        animation: _animation,
-        outsideGap: widget.outsideGap,
-        corner: widget.cornerContent == null
-            ? null
-            : Builder(
-                builder: (context) =>
-                    widget.cornerContent!(context, widget.controller),
-              ),
-        cornerInsets: MediaQuery.paddingOf(context) + const EdgeInsets.all(8),
-        outside: widget.outsideContent == null
-            ? null
-            : Builder(
-                builder: (context) =>
-                    widget.outsideContent!(context, widget.controller),
-              ),
-        // Read as one unit, and announced when it appears.
-        child: Semantics(
-          container: true,
-          liveRegion: true,
-          explicitChildNodes: true,
-          child: Padding(
-            padding:
-                style.padding ??
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: IconTheme.merge(
-              data: IconThemeData(color: foreground),
-              child: DefaultTextStyle.merge(
-                style: TextStyle(color: foreground),
-                child: Builder(
+      child: _wrapHover(
+        PinpointBubbleLayout(
+          target: anchor,
+          visible: visible,
+          direction: widget.direction,
+          alignment: widget.alignment,
+          gap: widget.gap,
+          margin: widget.screenMargin,
+          autoFlip: widget.autoFlip,
+          color: color,
+          borderRadius:
+              style.borderRadius ?? const BorderRadius.all(Radius.circular(12)),
+          side: style.side ?? BorderSide.none,
+          shadows: style.shadows ?? const [],
+          arrow: style.arrow ?? const PinpointArrow(),
+          animation: _animation,
+          outsideGap: widget.outsideGap,
+          corner: widget.cornerContent == null
+              ? null
+              : Builder(
                   builder: (context) =>
-                      widget.content(context, widget.controller),
+                      widget.cornerContent!(context, _controller),
+                ),
+          cornerInsets: MediaQuery.paddingOf(context) + const EdgeInsets.all(8),
+          outside: widget.outsideContent == null
+              ? null
+              : Builder(
+                  builder: (context) =>
+                      widget.outsideContent!(context, _controller),
+                ),
+          // Read as one unit, and announced when it appears.
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            explicitChildNodes: true,
+            child: Padding(
+              padding:
+                  style.padding ??
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: IconTheme.merge(
+                data: IconThemeData(color: foreground),
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(color: foreground),
+                  child: Builder(
+                    builder: (context) => widget.content(context, _controller),
+                  ),
                 ),
               ),
             ),
@@ -379,8 +486,8 @@ class _PinpointState extends State<Pinpoint>
           label: widget.dismissible
               ? MaterialLocalizations.of(context).modalBarrierDismissLabel
               : null,
-          onTap: widget.dismissible ? widget.controller.hide : null,
-          onDismiss: widget.dismissible ? widget.controller.hide : null,
+          onTap: widget.dismissible ? _controller.hide : null,
+          onDismiss: widget.dismissible ? _controller.hide : null,
           child: PinpointBarrier(
             color: highlight.color,
             holeRect: highlight.spotlight ? anchor : null,
