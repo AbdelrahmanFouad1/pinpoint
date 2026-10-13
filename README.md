@@ -34,6 +34,8 @@ part is customizable, and right-to-left layouts work out of the box.
 - **Anchored bubbles** on the top, bottom, start or end side of any widget,
   with an arrow that keeps pointing at it, even when the bubble is pushed
   away from the screen edge.
+- **Rich tooltips**: show a bubble on hover, long press or tap, with no
+  controller.
 - **Smart placement**: flips to the other side when there's no room,
   follows the target while scrolling, and hides while it's scrolled away.
 - **Dim** the screen, or **spotlight** the target through a hole of any
@@ -117,6 +119,28 @@ content: (context, controller) => Row(
   ],
 ),
 ```
+
+### Show on hover, long press or tap
+
+Leave out the controller and let gestures on the child show the bubble,
+for a tooltip that can hold anything:
+
+```dart
+Pinpoint(
+  triggers: const {PinpointTrigger.hover, PinpointTrigger.longPress},
+  content: (context, controller) => const Text('Copies the link'),
+  child: IconButton(icon: const Icon(Icons.link), onPressed: copy),
+)
+```
+
+| Trigger | Shows the bubble when |
+| --- | --- |
+| `hover` | The mouse rests on the child for `hoverDelay` (300ms by default). It stays while the pointer is over the child or the bubble, so the bubble's content can be clicked. |
+| `longPress` | The child is long pressed, like `Tooltip` on touch screens. |
+| `tap` | The child is tapped; tapping again hides it. The child still gets the tap. |
+
+Combine them, as above, to cover both mouse and touch screens. Triggers work
+with a controller of your own too.
 
 ### Placement
 
@@ -238,9 +262,23 @@ PinpointTour(
 - The close button skips the tour. It sits in the bubble's top corner, or
   in the screen's, inside the safe area. In the screen, it moves to the next
   free corner rather than cover the target or the bubble.
+- `showProgress: true` adds a row of dots to the bubble, one per step, with
+  the current one stretched. Screen readers hear "Step 2 of 4"; translate it
+  with `progressLabel`. `PinpointTourProgress` is the same dots, for your
+  own content.
 - Change the text with `nextLabel`, `doneLabel`, `previousLabel` and
   `closeLabel`, hide Previous with `showPrevious: false`, or draw your own
-  buttons with `builder: (context, tour) => ...`.
+  buttons with `builder: (context, tour) => ...` and your own close button
+  with `closeBuilder: (context, tour) => ...`:
+
+  ```dart
+  PinpointTourControls(
+    showClose: true,
+    showProgress: true,
+    closeBuilder: (context, tour) =>
+        TextButton(onPressed: tour.skip, child: const Text('Skip')),
+  )
+  ```
 - A step can turn them off with `showControls: false`.
 
 <br clear="right">
@@ -392,9 +430,9 @@ Container(
 
 ## Example app
 
-[The example](example) is a gallery of everything above: bubbles and
-placement, spotlight shapes and animations, a tour with every button option,
-and a multi-screen tour with demo data. A switch flips it all to
+[The example](example) is a gallery of everything above: bubbles,
+placement and triggers, spotlight shapes and animations, a tour with every
+button option, and a multi-screen tour with demo data. A switch flips it all to
 right-to-left.
 
 ```sh

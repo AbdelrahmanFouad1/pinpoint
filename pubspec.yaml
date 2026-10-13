@@ -1,6 +1,6 @@
 name: pinpoint
 description: Anchored bubbles with a pointing arrow, spotlight highlighting, and guided tours for Flutter. Fully customizable and RTL-ready.
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/AbdelrahmanFouad1/pinpoint
 issue_tracker: https://github.com/AbdelrahmanFouad1/pinpoint/issues
 

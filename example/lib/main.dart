@@ -232,6 +232,9 @@ class _BubbleDemoState extends State<BubbleDemo> {
                     child: const Text('Target'),
                   ),
                 ),
+                const SizedBox(height: 40),
+                const Divider(),
+                const _TriggersSection(),
                 const SizedBox(height: 400),
               ],
             ),
@@ -401,6 +404,8 @@ class _TourDemoState extends State<TourDemo> {
   PinpointControlsPlacement _placement = PinpointControlsPlacement.outside;
   _Close _close = _Close.screen;
   bool _tapTarget = false;
+  bool _progress = true;
+  bool _skipText = false;
   PinpointTour? _tour;
 
   @override
@@ -419,6 +424,20 @@ class _TourDemoState extends State<TourDemo> {
         closePlacement: _close == _Close.screen
             ? PinpointClosePlacement.screen
             : PinpointClosePlacement.bubble,
+        showProgress: _progress,
+        // Any widget can stand in for the close button.
+        closeBuilder: _skipText
+            ? (context, tour) => TextButton(
+                onPressed: tour.skip,
+                style: _close == _Close.screen
+                    ? TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                      )
+                    : null,
+                child: const Text('Skip'),
+              )
+            : null,
       ),
       style: const PinpointStyle(
         color: Colors.white,
@@ -508,6 +527,10 @@ class _TourDemoState extends State<TourDemo> {
             placement: _placement,
             close: _close,
             tapTarget: _tapTarget,
+            progress: _progress,
+            skipText: _skipText,
+            onProgress: (v) => setState(() => _progress = v),
+            onSkipText: (v) => setState(() => _skipText = v),
             onPlacement: (p) => setState(() => _placement = p),
             onClose: (v) => setState(() => _close = v),
             onTapTarget: (v) => setState(() => _tapTarget = v),
@@ -556,6 +579,10 @@ class _TourSettings extends StatelessWidget {
     required this.placement,
     required this.close,
     required this.tapTarget,
+    required this.progress,
+    required this.skipText,
+    required this.onProgress,
+    required this.onSkipText,
     required this.onPlacement,
     required this.onClose,
     required this.onTapTarget,
@@ -565,6 +592,10 @@ class _TourSettings extends StatelessWidget {
   final PinpointControlsPlacement placement;
   final _Close close;
   final bool tapTarget;
+  final bool progress;
+  final bool skipText;
+  final ValueChanged<bool> onProgress;
+  final ValueChanged<bool> onSkipText;
   final ValueChanged<PinpointControlsPlacement> onPlacement;
   final ValueChanged<_Close> onClose;
   final ValueChanged<bool> onTapTarget;
@@ -608,6 +639,18 @@ class _TourSettings extends StatelessWidget {
               ],
               selected: {close},
               onSelectionChanged: (s) => onClose(s.single),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('"Skip" text instead of ✕'),
+              value: skipText,
+              onChanged: close == _Close.off ? null : onSkipText,
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Progress dots'),
+              value: progress,
+              onChanged: onProgress,
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -946,6 +989,70 @@ class _TransactionTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Bubbles shown by gestures on their child, with no controller.
+class _TriggersSection extends StatelessWidget {
+  const _TriggersSection();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bubble(String text) => Text(text, textAlign: TextAlign.center);
+    return Column(
+      children: [
+        const Text(
+          'Triggers: no controller needed',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 24,
+          runSpacing: 24,
+          alignment: WrapAlignment.center,
+          children: [
+            Pinpoint(
+              triggers: const {PinpointTrigger.hover},
+              content: (context, controller) =>
+                  bubble('Shown on hover.\nMove onto me: I stay.'),
+              child: const Chip(
+                avatar: Icon(Icons.mouse),
+                label: Text('Hover'),
+              ),
+            ),
+            Pinpoint(
+              triggers: const {PinpointTrigger.longPress},
+              content: (context, controller) => bubble('Shown on long press.'),
+              child: const Chip(
+                avatar: Icon(Icons.touch_app),
+                label: Text('Long press'),
+              ),
+            ),
+            Pinpoint(
+              triggers: const {PinpointTrigger.tap},
+              content: (context, controller) => bubble('Tap again to hide.'),
+              child: const Chip(
+                avatar: Icon(Icons.ads_click),
+                label: Text('Tap'),
+              ),
+            ),
+            // Mouse and touch screens both covered, like Tooltip.
+            Pinpoint(
+              triggers: const {
+                PinpointTrigger.hover,
+                PinpointTrigger.longPress,
+              },
+              style: const PinpointStyle(color: _gold),
+              content: (context, controller) => bubble('Hover or long press.'),
+              child: IconButton.filledTonal(
+                onPressed: () {},
+                icon: const Icon(Icons.info_outline),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

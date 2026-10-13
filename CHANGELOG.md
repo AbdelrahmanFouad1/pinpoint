@@ -1,3 +1,14 @@
+## 1.0.1
+
+* `Pinpoint.triggers`: show a bubble on hover, long press or tap, without a
+  controller of your own. `Pinpoint.controller` is now optional when
+  triggers are set, and `hoverDelay` sets how long a hover waits.
+* `PinpointTourControls.closeBuilder`: replace the tour's close button with
+  any widget, in the bubble or the screen corner.
+* `PinpointTourControls.showProgress`: a row of dots in each step's bubble,
+  with a screen reader label set by `progressLabel`. `PinpointTourProgress`
+  is public for custom content.
+
 ## 1.0.0
 
 The API is now stable.
