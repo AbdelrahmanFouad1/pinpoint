@@ -315,4 +315,96 @@ void main() {
         .style!;
     expect(style.fontFamily, 'IBMPlexSansArabic');
   });
+
+  group('closeBuilder', () {
+    for (final placement in PinpointClosePlacement.values) {
+      testWidgets('replaces the close button in the ${placement.name}', (
+        tester,
+      ) async {
+        final tour = makeTour(
+          PinpointTourControls(
+            showClose: true,
+            closePlacement: placement,
+            closeBuilder: (context, tour) =>
+                TextButton(onPressed: tour.skip, child: const Text('Skip')),
+          ),
+        );
+        await start(tester, tour);
+        expect(find.byTooltip('Close'), findsNothing);
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+        expect(events, ['skip']);
+      });
+    }
+
+    testWidgets('is not shown when showClose is false', (tester) async {
+      final tour = makeTour(
+        PinpointTourControls(
+          closeBuilder: (context, tour) => const Text('Skip'),
+        ),
+      );
+      await start(tester, tour);
+      expect(find.text('Skip'), findsNothing);
+    });
+  });
+
+  group('progress dots', () {
+    for (final placement in PinpointControlsPlacement.values) {
+      testWidgets('follow the current step, buttons ${placement.name}', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        final tour = makeTour(
+          PinpointTourControls(placement: placement, showProgress: true),
+        );
+        await start(tester, tour);
+
+        expect(find.byType(PinpointTourProgress), findsOneWidget);
+        // The dots live in the bubble, under the step's content.
+        expect(
+          tester.getRect(find.byType(PinpointTourProgress)).top,
+          greaterThan(tester.getRect(find.text('Step a')).bottom),
+        );
+        expect(find.bySemanticsLabel('Step 1 of 3'), findsOneWidget);
+
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Step 2 of 3'), findsOneWidget);
+        semantics.dispose();
+      });
+    }
+
+    testWidgets('the current dot is the wide one', (tester) async {
+      final tour = makeTour(const PinpointTourControls(showProgress: true));
+      await start(tester, tour);
+      final dots = find.descendant(
+        of: find.byType(PinpointTourProgress),
+        matching: find.byType(AnimatedContainer),
+      );
+      // Each size includes the 6px gap after the dot.
+      final widths = [
+        for (var i = 0; i < 3; i++) tester.getSize(dots.at(i)).width,
+      ];
+      expect(widths, [18 + 6, 6 + 6, 6 + 6]);
+    });
+
+    testWidgets('the label can be translated', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final tour = makeTour(
+        PinpointTourControls(
+          showProgress: true,
+          progressLabel: (step, total) => 'الخطوة $step من $total',
+        ),
+      );
+      await start(tester, tour);
+      expect(find.bySemanticsLabel('الخطوة 1 من 3'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('off by default', (tester) async {
+      final tour = makeTour(const PinpointTourControls());
+      await start(tester, tour);
+      expect(find.byType(PinpointTourProgress), findsNothing);
+    });
+  });
 }

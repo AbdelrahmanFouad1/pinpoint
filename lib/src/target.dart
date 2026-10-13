@@ -256,11 +256,35 @@ class _PinpointTargetState extends State<PinpointTarget>
       dismissible: tour.dismissible,
       content: (context, _) {
         var body = step.content(context, tour);
+        final progress = controls != null && controls.showProgress
+            ? PinpointTourProgress(tour: tour, label: controls.progressLabel)
+            : null;
         if (controls != null && inside) {
+          // Dots, then the buttons, under the content.
           body = Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: [body, const SizedBox(height: 8), buttons(context)],
+            children: [
+              body,
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (progress != null) ...[
+                    progress,
+                    const SizedBox(width: 12),
+                  ],
+                  buttons(context),
+                ],
+              ),
+            ],
+          );
+        } else if (progress != null) {
+          // The buttons are outside; the dots stay in the bubble.
+          body = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [body, const SizedBox(height: 12), progress],
           );
         }
         if (controls != null &&
@@ -271,13 +295,14 @@ class _PinpointTargetState extends State<PinpointTarget>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Flexible(child: body),
-              IconButton(
-                onPressed: tour.skip,
-                tooltip: controls.closeLabel,
-                visualDensity: VisualDensity.compact,
-                color: IconTheme.of(context).color,
-                icon: const Icon(Icons.close),
-              ),
+              controls.closeBuilder?.call(context, tour) ??
+                  IconButton(
+                    onPressed: tour.skip,
+                    tooltip: controls.closeLabel,
+                    visualDensity: VisualDensity.compact,
+                    color: IconTheme.of(context).color,
+                    icon: const Icon(Icons.close),
+                  ),
             ],
           );
         }
@@ -288,6 +313,7 @@ class _PinpointTargetState extends State<PinpointTarget>
               controls.showClose &&
               controls.closePlacement == PinpointClosePlacement.screen
           ? (context, _) =>
+                controls.closeBuilder?.call(context, tour) ??
                 PinpointTourCloseButton(tour: tour, controls: controls)
           : null,
       outsideContent: controls != null && !inside

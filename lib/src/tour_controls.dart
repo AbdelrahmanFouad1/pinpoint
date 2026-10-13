@@ -52,7 +52,14 @@ class PinpointTourControls {
     this.previousLabel = 'Previous',
     this.closeLabel = 'Close',
     this.builder,
+    this.closeBuilder,
+    this.showProgress = false,
+    this.progressLabel = defaultProgressLabel,
   });
+
+  /// The default [progressLabel]: "Step 2 of 4".
+  static String defaultProgressLabel(int step, int total) =>
+      'Step $step of $total';
 
   /// Where the Next and Previous buttons go.
   final PinpointControlsPlacement placement;
@@ -83,6 +90,19 @@ class PinpointTourControls {
   /// [showClose].
   final PinpointTourContentBuilder? builder;
 
+  /// Builds the close button instead of the default one, for example a
+  /// "Skip" text button. It's placed per [closePlacement] and shown per
+  /// [showClose]; call [PinpointTour.skip] from it.
+  final PinpointTourContentBuilder? closeBuilder;
+
+  /// Whether to show a row of dots in the bubble, one per step, with the
+  /// current one highlighted. See [PinpointTourProgress].
+  final bool showProgress;
+
+  /// What screen readers say for the progress dots, from the current step
+  /// (counting from 1) and the number of steps.
+  final String Function(int step, int total) progressLabel;
+
   @override
   bool operator ==(Object other) =>
       other is PinpointTourControls &&
@@ -94,7 +114,10 @@ class PinpointTourControls {
       other.doneLabel == doneLabel &&
       other.previousLabel == previousLabel &&
       other.closeLabel == closeLabel &&
-      other.builder == builder;
+      other.builder == builder &&
+      other.closeBuilder == closeBuilder &&
+      other.showProgress == showProgress &&
+      other.progressLabel == progressLabel;
 
   @override
   int get hashCode => Object.hash(
@@ -107,6 +130,9 @@ class PinpointTourControls {
     previousLabel,
     closeLabel,
     builder,
+    closeBuilder,
+    showProgress,
+    progressLabel,
   );
 }
 
@@ -233,6 +259,60 @@ class PinpointTourCloseButton extends StatelessWidget {
           minimumSize: const Size(48, 48),
         ),
         child: const Icon(Icons.close),
+      ),
+    );
+  }
+}
+
+/// A row of dots, one per step of [tour], with the current one stretched.
+///
+/// [PinpointTourControls.showProgress] adds it to every step; you can also
+/// put it in a step's content yourself. Dots take the bubble's text color
+/// unless [color] is set.
+class PinpointTourProgress extends StatelessWidget {
+  /// Creates the dots for [tour]'s current step.
+  const PinpointTourProgress({
+    super.key,
+    required this.tour,
+    this.color,
+    this.label = PinpointTourControls.defaultProgressLabel,
+  });
+
+  /// The tour to show the progress of.
+  final PinpointTour tour;
+
+  /// The dots' color. Defaults to the ambient icon color.
+  final Color? color;
+
+  /// What screen readers say, from the current step (counting from 1) and
+  /// the number of steps.
+  final String Function(int step, int total) label;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = tour.currentIndex ?? 0;
+    final color = this.color ?? IconTheme.of(context).color ?? Colors.black;
+    return Semantics(
+      label: label(current + 1, tour.length),
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < tour.length; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsetsDirectional.only(end: 6),
+                width: i == current ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == current
+                      ? color
+                      : color.withValues(alpha: color.a * 0.3),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
